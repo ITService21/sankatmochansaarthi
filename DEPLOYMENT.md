@@ -249,7 +249,8 @@ The app sets `trust proxy`, so client IPs in the API logs and rate limiter come 
 - If you use `STORAGE_DRIVER=local`, back up `LOCAL_STORAGE_DIR` too.
 - API hit logs purge themselves daily (default 90 days; change in Admin → Settings).
 
-**Deploying an update:**
+**Deploying an update** (always run `npm run migrate` — new features add tables/columns, and without it you get errors like
+`Table 'upload_drafts' doesn't exist`; the API now also logs `DATABASE IS OUT OF DATE` at startup when migrations are pending):
 ```bash
 cd /var/www/saarthi && git pull
 cd backend && npm ci && npm run migrate && sudo systemctl restart saarthi-api

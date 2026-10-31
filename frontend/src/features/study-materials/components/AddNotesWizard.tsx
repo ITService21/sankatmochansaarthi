@@ -27,8 +27,8 @@ const messageOf = (e: unknown) => (e instanceof ApiError ? e.message : e instanc
  */
 export function AddNotesWizard({ onClose, onChanged }: { onClose: () => void; onChanged: () => void }) {
   const loaded = useAsync(() => materialsApi.listDrafts(), []);
-  if (loaded.loading) return <AppModal open wide title="Add notes" onClose={onClose}><LoadingState /></AppModal>;
-  if (loaded.error != null) return <AppModal open wide title="Add notes" onClose={onClose}><ErrorState error={loaded.error} onRetry={loaded.reload} /></AppModal>;
+  if (loaded.loading) return <AppModal open wide compact title="Add notes" onClose={onClose}><LoadingState /></AppModal>;
+  if (loaded.error != null) return <AppModal open wide compact title="Add notes" onClose={onClose}><ErrorState error={loaded.error} onRetry={loaded.reload} /></AppModal>;
   return <Wizard initialDrafts={loaded.data ?? []} onClose={onClose} onChanged={onChanged} />;
 }
 
@@ -69,7 +69,7 @@ function Wizard({ initialDrafts, onClose, onChanged }: { initialDrafts: UploadDr
   const finish = () => { if (saved) onChanged(); if (saved && drafts.length === 0) draft.clear(); onClose(); };
 
   return (
-    <AppModal open wide title="Add notes" onClose={finish}>
+    <AppModal open wide compact title="Add notes" onClose={finish}>
       <ol className="mb-4 flex items-center gap-2 text-sm font-semibold" aria-label="Steps">
         <li className={`rounded-full px-3 py-1 ${step === "details" ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600"}`}>1 · Details &amp; files</li>
         <span aria-hidden className="text-slate-300">—</span>
@@ -84,7 +84,7 @@ function Wizard({ initialDrafts, onClose, onChanged }: { initialDrafts: UploadDr
               <AppButton size="sm" onClick={() => setStep("review")}>Go to review <ArrowRight size={14} /></AppButton>
             </div>
           )}
-          <NoteDetailsFields value={details} onChange={setDetails} errors={touched ? errs : {}} />
+          <NoteDetailsFields columns={3} value={details} onChange={setDetails} errors={touched ? errs : {}} />
           <MultiFileDropzone required files={files} onFiles={setFiles} accept={ACCEPT} max={MAX_FILES} label="Files" hint={`PDF, JPG, PNG, DOC or DOCX — up to ${MAX_FILES} at a time. Everything is converted to PDF; you check it before it is saved.`}
             error={touched && !files.length ? "Choose at least one file" : undefined} />
           {imageCount > 1 && (

@@ -33,6 +33,20 @@ export async function runMigrations(): Promise<string[]> {
   return ranNow;
 }
 
+/**
+ * Migration files that exist in the code but have not been applied to this database yet (empty = up to date).
+ * Used at startup to warn loudly when new code runs against an old database — the cause of "Table … doesn't exist" errors.
+ */
+export async function pendingMigrations(): Promise<string[]> {
+  const pool = getPool();
+  let applied = new Set<string>();
+  try {
+    const [done] = await pool.query("SELECT name FROM schema_migrations");
+    applied = new Set((done as Array<{ name: string }>).map((r) => r.name));
+  } catch { /* schema_migrations missing: nothing has been applied */ }
+  return fs.readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith(".sql") && !applied.has(f)).sort();
+}
+
 // CLI entry: `npm run migrate`
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
   // `npm run migrate` = apply migrations, then the idempotent base seeds (roles, plans, config, classes, material types)

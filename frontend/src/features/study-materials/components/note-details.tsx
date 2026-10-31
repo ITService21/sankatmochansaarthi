@@ -99,7 +99,7 @@ export function setDetail(d: NoteDetails, k: keyof NoteDetails, v: string): Note
  * chapter list shows only chapters of that board, class, subject and stream (plus "general" chapters valid for any stream).
  * An Admin restricted to certain boards/classes/subjects only sees those (the server enforces it regardless).
  */
-export function NoteDetailsFields({ value: f, onChange, errors = {} }: { value: NoteDetails; onChange: (d: NoteDetails) => void; errors?: DetailsErrors }) {
+export function NoteDetailsFields({ value: f, onChange, errors = {}, columns = 2 }: { value: NoteDetails; onChange: (d: NoteDetails) => void; errors?: DetailsErrors; columns?: 2 | 3 }) {
   const { user, can } = useAuth();
   const set = (k: keyof NoteDetails) => (v: string) => onChange(setDetail(f, k, v));
   const inScope = (ids: number[] | undefined) => (o: { value: string | number }) => !ids?.length || ids.includes(Number(o.value));
@@ -115,8 +115,8 @@ export function NoteDetailsFields({ value: f, onChange, errors = {} }: { value: 
   const noChapters = `No ${streamName} chapters for this board, class and subject yet.${can("academic.manage") ? " Add one in Academic Setup → Chapters." : " Ask a Super Admin to add one."}`;
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      <AppTextarea className="sm:col-span-2" label="Description" value={f.description} onChange={(ev) => set("description")(ev.target.value)} />
+    <div className={`grid gap-3 ${columns === 3 ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+      <AppTextarea className={columns === 3 ? "sm:col-span-3" : "sm:col-span-2"} {...(columns === 3 ? { rows: 2 } : {})} label="Description" value={f.description} onChange={(ev) => set("description")(ev.target.value)} />
       <AppCombobox required label="Board" placeholder="Select…" options={board.options.filter(inScope(sc?.board_ids))} value={f.board_id} onChange={set("board_id")} error={errors.board_id} />
       <AppCombobox required label="Class" placeholder={f.board_id ? "Select…" : "Choose a board first"} options={cls.options.filter(inScope(sc?.class_ids))} value={f.class_id} onChange={set("class_id")} disabled={!f.board_id} error={errors.class_id} />
       <AppSelect required label="Stream" placeholder={f.class_id ? "Select…" : "Choose a class first"} options={STREAM_OPTIONS} value={f.stream} onChange={set("stream")} disabled={!f.class_id} error={errors.stream} />
