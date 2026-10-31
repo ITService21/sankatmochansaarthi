@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# Frontend environment files (VITE_* values); only the template is committed.
+.env
+.env.*
+!.env.example
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

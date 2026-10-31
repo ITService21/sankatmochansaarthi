@@ -7,6 +7,7 @@ import { Material } from "../../../shared/types";
 import { CheckoutDialog } from "../../payments/components/CheckoutDialog";
 import { materialsApi } from "../api/study-materials.api";
 import { saveBlob } from "./saveBlob";
+import { noteHeading } from "../../../shared/utils/note-heading";
 
 /** "Buy Now" button + checkout dialog for a paid note. Calls `onPaid` once the server confirms payment. */
 export function BuyButton({ m, onPaid, size = "md", full, showPrice }: { m: Material; onPaid: () => void; size?: "sm" | "md"; full?: boolean; showPrice?: boolean }) {
@@ -15,7 +16,7 @@ export function BuyButton({ m, onPaid, size = "md", full, showPrice }: { m: Mate
   return (
     <>
       <AppButton size={size} className={full ? "w-full" : ""} onClick={() => setOpen(true)}><ShoppingCart size={16} />Buy Now{showPrice ? ` · ${formatCurrency(m.price_minor_units, m.currency)}` : ""}</AppButton>
-      {open && <CheckoutDialog target={{ kind: "material", material_id: m.id }} title={m.title} amountMinor={m.price_minor_units} currency={m.currency} onClose={() => setOpen(false)} onPaid={onPaid} />}
+      {open && <CheckoutDialog target={{ kind: "material", material_id: m.id }} title={noteHeading(m)} amountMinor={m.price_minor_units} currency={m.currency} onClose={() => setOpen(false)} onPaid={onPaid} />}
     </>
   );
 }

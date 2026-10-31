@@ -37,7 +37,7 @@ export const studyMaterialsRepository = {
       }
     };
     eq("sm.board_id", f.board_id); eq("sm.class_id", f.class_id); eq("sm.subject_id", f.subject_id);
-    eq("sm.chapter_id", f.chapter_id); eq("sm.topic_id", f.topic_id); eq("sm.language_id", f.language_id);
+    eq("sm.chapter_id", f.chapter_id); eq("sm.topic_id", f.topic_id); eq("sm.language_id", f.language_id); eq("sm.stream", f.stream);
     eq("sm.access_type", f.access_type); eq("sm.material_type_id", f.material_type_id); eq("sm.status", f.status);
     if (f.purchased_by !== undefined) {
       const now = new Date();

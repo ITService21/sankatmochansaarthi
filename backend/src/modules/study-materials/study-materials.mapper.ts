@@ -20,6 +20,7 @@ export function toMaterialDto(row: MaterialRow, access: MaterialAccessFlags, inc
     title: row.title,
     description: row.description,
     slug: row.slug,
+    stream: row.stream,
     board: { id: row.board_id, name: row.board_name },
     class: { id: row.class_id, name: row.class_name },
     subject: { id: row.subject_id, name: row.subject_name },

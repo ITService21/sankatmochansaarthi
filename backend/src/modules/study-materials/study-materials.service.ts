@@ -48,6 +48,16 @@ async function resolveMaterialType(id: number | undefined, conn?: PoolConnection
   return row.id;
 }
 
+/** First active language, used when the client does not choose one. @throws 400 when none is configured */
+async function defaultLanguageId(): Promise<number> {
+  const row = await queryOne<{ id: number }>("SELECT id FROM languages WHERE deleted_at IS NULL AND is_active = 1 ORDER BY sort_order, id LIMIT 1");
+  if (!row) throw badRequest("No language is configured yet");
+  return row.id;
+}
+
+/** "Chapter 3 - Algebra.pdf" -> "Chapter 3 - Algebra" (title fallback when none is typed). */
+const titleFromFilename = (name: string) => name.replace(/\.pdf$/i, "").replace(/[_]+/g, " ").trim().slice(0, 200) || "Untitled note";
+
 /** Best-effort removal of an object we uploaded but could not commit; queues it if deletion fails. */
 async function compensateUpload(key: string) {
   try {
@@ -107,7 +117,9 @@ export const studyMaterialsService = {
     const pdf = await validatePdfUpload(file, maxBytes());
     const pricingError = assertPricing(body.access_type, body.price_minor_units, body.currency);
     if (pricingError) throw badRequest(pricingError);
-    await assertTaxonomyConsistent(body);
+    const languageId = body.language_id ?? (await defaultLanguageId());
+    const title = body.title ?? titleFromFilename(pdf.safeFilename);
+    await assertTaxonomyConsistent({ ...body, language_id: languageId });
     const materialTypeId = await resolveMaterialType(body.material_type_id);
     const previewLimit = body.preview_page_limit ?? (await settingsService.get("pdf_preview_page_limit"));
 
@@ -116,9 +128,9 @@ export const studyMaterialsService = {
     try {
       id = await withTransaction(async (conn) => {
         const newId = await repo.insertDraft(conn, {
-          title: body.title, description: body.description ?? null,
+          title, description: body.description ?? null, stream: body.stream,
           board_id: body.board_id, class_id: body.class_id, subject_id: body.subject_id,
-          chapter_id: body.chapter_id, topic_id: body.topic_id ?? null, language_id: body.language_id,
+          chapter_id: body.chapter_id, topic_id: body.topic_id ?? null, language_id: languageId,
           original_s3_key: "pending", original_filename: pdf.safeFilename, file_size_bytes: pdf.bytes.length,
           original_file_sha256: pdf.sha256, page_count: pdf.pageCount, preview_page_limit: previewLimit,
           access_type: body.access_type, material_type_id: materialTypeId,
@@ -130,7 +142,7 @@ export const studyMaterialsService = {
         await getStorage().put(key, pdf.bytes, "application/pdf");
         uploadedKey = key;
         await repo.update(conn, newId, { original_s3_key: key });
-        await recordAudit(conn, actor.id, "material.create", "study_materials", newId, { title: body.title });
+        await recordAudit(conn, actor.id, "material.create", "study_materials", newId, { title });
         return newId;
       });
     } catch (err) {

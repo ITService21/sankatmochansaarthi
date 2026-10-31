@@ -9,6 +9,7 @@ import { materialsApi } from "../api/study-materials.api";
 import { MaterialFormModal } from "../components/MaterialFormModal";
 import { MaterialPriceTag } from "../components/MaterialPriceTag";
 import { PreviewModal } from "../components/PreviewModal";
+import { noteHeading } from "../../../shared/utils/note-heading";
 
 /** Administrator note management: search/filter (query params), create, edit, replace PDF, publish, retry preview, soft-delete. */
 export function AdminMaterialsPage() {
@@ -35,7 +36,7 @@ export function AdminMaterialsPage() {
   const del = useMutation(async () => { await materialsApi.remove(deleting!.id); setDeleting(null); reload(); });
 
   const cols: Column<Material>[] = [
-    { key: "title", header: "Title", render: (m) => <button className="text-left font-medium text-indigo-700 hover:underline" onClick={() => setPreview(m)}>{m.title}</button> },
+    { key: "title", header: "Topic", render: (m) => <button className="text-left font-medium text-indigo-700 hover:underline" onClick={() => setPreview(m)}>{noteHeading(m)}</button> },
     { key: "ctx", header: "Board / Class / Subject", render: (m) => `${m.board.name} · ${m.class.name} · ${m.subject.name}` },
     { key: "material_type", header: "Type", render: (m) => <StatusBadge value="draft" label={m.material_type.name} /> },
     { key: "access", header: "Access", render: (m) => <MaterialPriceTag m={m} /> },

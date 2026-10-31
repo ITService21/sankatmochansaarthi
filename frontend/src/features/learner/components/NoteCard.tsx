@@ -7,6 +7,7 @@ import { classLabel } from "../../../shared/utils/roman";
 import { AccessBadge } from "../../study-materials/components/MaterialBadges";
 import { BuyButton } from "../../study-materials/components/MaterialActions";
 import { AddToDownloadsButton } from "../../study-materials/components/LibraryActions";
+import { noteHeading } from "../../../shared/utils/note-heading";
 
 const Chip = ({ children }: { children: React.ReactNode }) => <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">{children}</span>;
 
@@ -18,7 +19,7 @@ export function NoteCard({ m, onPreview, onChanged }: { m: Material; onPreview: 
       <div className="flex items-start gap-4">
         <SubjectIcon subject={m.subject.name} size={56} />
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2"><h3 className="text-lg font-bold text-slate-900">{m.title}</h3><AccessBadge m={m} /></div>
+          <div className="flex flex-wrap items-center gap-2"><h3 className="text-lg font-bold text-slate-900">{noteHeading(m)}</h3><AccessBadge m={m} /></div>
           {m.description && <p className="mt-1 line-clamp-2 text-sm text-slate-600">{m.description}</p>}
           <div className="mt-3 flex flex-wrap gap-2">
             <span className="rounded-full bg-orange-100 px-2.5 py-1 text-xs font-semibold text-orange-800">{m.material_type.name}</span><Chip>{m.board.name}</Chip><Chip>{m.class.name.startsWith("Class") ? m.class.name : classLabel({ class_number: null, name: m.class.name })}</Chip><Chip>{m.subject.name}</Chip>

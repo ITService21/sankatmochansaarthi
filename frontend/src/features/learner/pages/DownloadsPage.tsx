@@ -8,6 +8,7 @@ import { Material } from "../../../shared/types";
 import { formatFileSize } from "../../../shared/utils/format-file-size";
 import { materialsApi } from "../../study-materials/api/study-materials.api";
 import { SecureViewer } from "../../study-materials/components/SecureViewer";
+import { noteHeading } from "../../../shared/utils/note-heading";
 
 /**
  * My Downloads: the in-app library. Notes are read here, in the secure viewer, and are never saved to the device —
@@ -49,13 +50,13 @@ export function DownloadsPage() {
                 <article key={m.id} className="flex flex-wrap items-center gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-card">
                   <SubjectIcon subject={m.subject.name} size={52} />
                   <div className="min-w-0 flex-1">
-                    <h2 className="font-bold text-slate-900">{m.title}</h2>
+                    <h2 className="font-bold text-slate-900">{noteHeading(m)}</h2>
                     <p className="text-xs text-slate-500">{m.board.name} · {m.class.name} · {m.subject.name} · {m.chapter.name}{m.topic ? ` · ${m.topic.name}` : ""}</p>
                     <p className="mt-1 text-xs text-slate-500">PDF · {formatFileSize(m.file_size_bytes)}{m.page_count ? ` · ${m.page_count} pages` : ""}</p>
                   </div>
                   {m.access.can_download ? <AppButton onClick={() => setReading(m)}><BookOpen size={16} />Read</AppButton>
                     : <Link to="/subscriptions" className="flex items-center gap-1.5 rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-amber-800"><Lock size={15} />Access ended — renew to read</Link>}
-                  <AppButton variant="ghost" size="sm" aria-label={`Remove ${m.title}`} onClick={() => setRemoving(m)}><Trash2 size={16} />Remove</AppButton>
+                  <AppButton variant="ghost" size="sm" aria-label={`Remove ${noteHeading(m)}`} onClick={() => setRemoving(m)}><Trash2 size={16} />Remove</AppButton>
                 </article>
               ))}
             </div>

@@ -38,7 +38,7 @@ export function WorkspaceSidebar({ topics, hasChapter, topicId, onTopic, types, 
             );
           })}
           {SOON_MODULES.map((m) => (
-            <li key={m.label}><span aria-disabled className="flex cursor-not-allowed items-center gap-3 rounded-xl bg-slate-50 px-3 py-2.5 text-sm text-slate-400"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white"><m.icon size={16} /></span><span className="flex-1">{m.label}</span><span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-500">Soon</span></span></li>
+            <li key={m.label}><span aria-disabled className="flex cursor-not-allowed items-center gap-3 rounded-xl bg-slate-50 px-3 py-2.5 text-sm text-slate-400"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white"><m.icon size={16} /></span><span className="flex-1">{m.label}</span><span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold uppercase text-slate-500">Coming soon</span></span></li>
           ))}
         </ul>
       </div>

@@ -5,17 +5,19 @@ const TRENDING_LIMIT = 8;
 export const publicService = {
   /**
    * "What's trending" on the landing page: published notes ranked by how many users saved or bought them
-   * (ties -> newest). Returns display metadata ONLY — no storage keys, no file access.
+   * (ties -> newest). `title` is the topic name (else chapter, else the stored title). Returns display metadata ONLY — no storage keys, no file access.
    * @returns up to 8 notes
    */
   async trending() {
     const rows = await queryRows<any>(
-      `SELECT sm.id, sm.title, sm.board_id, sm.class_id, sm.subject_id, sm.chapter_id, sm.access_type, sm.price_minor_units, sm.currency, sm.page_count,
+      `SELECT sm.id, COALESCE(t.name, ch.name, sm.title) AS title, sm.board_id, sm.class_id, sm.subject_id, sm.chapter_id, sm.access_type, sm.price_minor_units, sm.currency, sm.page_count,
               b.name AS board_name, c.name AS class_name, c.class_number, s.name AS subject_name
          FROM study_materials sm
          JOIN academic_boards b ON b.id = sm.board_id
          JOIN academic_classes c ON c.id = sm.class_id
          JOIN academic_subjects s ON s.id = sm.subject_id
+         LEFT JOIN academic_chapters ch ON ch.id = sm.chapter_id
+         LEFT JOIN academic_topics t ON t.id = sm.topic_id AND t.deleted_at IS NULL
         WHERE sm.status = 'published' AND sm.deleted_at IS NULL
         ORDER BY ((SELECT COUNT(*) FROM user_downloads d WHERE d.material_id = sm.id AND d.deleted_at IS NULL)
                 + (SELECT COUNT(*) FROM material_entitlements e WHERE e.material_id = sm.id AND e.deleted_at IS NULL)) DESC,

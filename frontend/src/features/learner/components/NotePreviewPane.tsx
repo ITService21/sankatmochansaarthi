@@ -7,6 +7,7 @@ import { AccessBadge } from "../../study-materials/components/MaterialBadges";
 import { BuyButton } from "../../study-materials/components/MaterialActions";
 import { AddToDownloadsButton } from "../../study-materials/components/LibraryActions";
 import { SecureViewer } from "../../study-materials/components/SecureViewer";
+import { noteHeading } from "../../../shared/utils/note-heading";
 
 /**
  * Full-width preview (everything except the sidebar). Shows ONLY the first N pages (enforced by the server).
@@ -23,7 +24,7 @@ export function NotePreviewPane({ noteId, onBack, onChanged }: { noteId: number;
       <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-card">
         <AppButton variant="secondary" size="sm" onClick={onBack}><ArrowLeft size={16} />Back to notes</AppButton>
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2"><h2 className="truncate text-lg font-bold text-slate-900">{m.title}</h2><AccessBadge m={m} /></div>
+          <div className="flex flex-wrap items-center gap-2"><h2 className="truncate text-lg font-bold text-slate-900">{noteHeading(m)}</h2><AccessBadge m={m} /></div>
           <p className="text-xs text-slate-500">{m.board.name} · {m.class.name} · {m.subject.name} · {m.chapter.name}{m.topic ? ` · ${m.topic.name}` : ""}</p>
         </div>
         <div className="flex flex-wrap items-start gap-2">
@@ -34,7 +35,7 @@ export function NotePreviewPane({ noteId, onBack, onChanged }: { noteId: number;
         {m.access.can_download ? `Previewing the first ${m.preview_page_limit} of ${m.page_count ?? "?"} pages. Add the note to My Downloads to read all of it.`
           : `Previewing the first ${m.preview_page_limit} of ${m.page_count ?? "?"} pages. Buy this note or subscribe to read the full document.`}</p>
       {m.access.can_preview
-        ? <SecureViewer key={`${m.id}-${m.updated_at}`} title={`${m.title} preview`} load={() => materialsApi.previewBlob(m.id)} className="min-h-[70vh]" />
+        ? <SecureViewer key={`${m.id}-${m.updated_at}`} title={`${noteHeading(m)} preview`} load={() => materialsApi.previewBlob(m.id)} className="min-h-[70vh]" />
         : <div className="rounded-2xl bg-white p-10 text-center text-slate-500 shadow-card">A preview isn't available for this note yet.</div>}
     </div>
   );

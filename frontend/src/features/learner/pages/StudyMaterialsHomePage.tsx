@@ -13,6 +13,13 @@ const MISSION = [
   { title: "Your progress", text: "Know the next step", Icon: TrendingUp, card: "border-violet-500 bg-gradient-to-br from-violet-50 to-fuchsia-100", icon: "bg-violet-600", sub: "text-violet-700" },
 ];
 
+const WHY = [
+  { Icon: BookOpen, title: "Concept-first notes", text: "Chapter-wise learning in simple language, with examples and revision material.", tint: "from-blue-50 to-sky-100", ring: "border-blue-200 hover:border-blue-500", icon: "bg-blue-600", num: "text-blue-900/80" },
+  { Icon: ClipboardCheck, title: "Practice & tests", text: "Check understanding with questions, tests and immediate feedback.", tint: "from-emerald-50 to-teal-100", ring: "border-emerald-200 hover:border-emerald-500", icon: "bg-emerald-600", num: "text-emerald-900/80" },
+  { Icon: Brain, title: "Mistake-based learning", text: "Review errors and focus on concepts that need more work.", tint: "from-amber-50 to-orange-100", ring: "border-amber-200 hover:border-amber-500", icon: "bg-amber-500", num: "text-amber-900/80" },
+  { Icon: TrendingUp, title: "Learning progress", text: "Keep your learning, saved materials and evaluations together.", tint: "from-violet-50 to-fuchsia-100", ring: "border-violet-200 hover:border-violet-500", icon: "bg-violet-600", num: "text-violet-900/80" },
+];
+
 /** "Study Materials" home — copy and layout follow the approved Sankatmochan Saarthi design (hero without the Explore Courses button). */
 export function StudyMaterialsHomePage() {
   const courses = useAsync(() => publicApi.courses(), []);
@@ -102,14 +109,16 @@ export function StudyMaterialsHomePage() {
       <section className="rounded-[2rem] bg-blue-50/70 p-6 md:p-10">
         <Eyebrow>Why Saarthi</Eyebrow>
         <h2 className="font-display mt-1 text-4xl font-bold text-slate-900">One place for your learning journey</h2>
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[[BookOpen, "Concept-first notes", "Chapter-wise learning in simple language, with examples and revision material."],
-            [ClipboardCheck, "Practice & tests", "Check understanding with questions, tests and immediate feedback."],
-            [Brain, "Mistake-based learning", "Review errors and focus on concepts that need more work."],
-            [TrendingUp, "Learning progress", "Keep your learning, saved materials and evaluations together."]].map(([Icon, t, s]) => {
-            const I = Icon as typeof BookOpen;
-            return <div key={t as string} className="rounded-2xl bg-white p-6 shadow-card"><span className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100 text-blue-700"><I size={24} /></span><h3 className="font-display text-xl font-bold uppercase text-slate-900" style={{ fontVariant: "normal" }}>{t as string}</h3><p className="mt-2 text-slate-600">{s as string}</p></div>;
-          })}
+        <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {WHY.map(({ Icon, title, text, tint, icon, ring, num }, n) => (
+            <div key={title} className={`group relative overflow-hidden rounded-2xl border-2 bg-gradient-to-br p-6 shadow-card transition-shadow hover:shadow-lg ${tint} ${ring}`}>
+              <span aria-hidden className="font-display pointer-events-none absolute -right-1 -top-3 select-none text-[88px] font-extrabold leading-none opacity-[0.08]">{n + 1}</span>
+              <span className={`relative mb-5 flex h-14 w-14 items-center justify-center rounded-2xl text-white shadow-md ring-4 ring-white/70 ${icon}`}><Icon size={26} /></span>
+              <h3 className="font-display relative text-xl font-extrabold uppercase leading-tight text-slate-900" style={{ fontVariant: "normal" }}>{title}</h3>
+              <span aria-hidden className={`relative mt-2 block h-1 w-10 rounded-full ${icon}`} />
+              <p className={`relative mt-3 text-[15px] font-medium leading-relaxed ${num}`}>{text}</p>
+            </div>
+          ))}
         </div>
       </section>
 

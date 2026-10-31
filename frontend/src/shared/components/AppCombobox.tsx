@@ -3,6 +3,8 @@ import { KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { SelectOption } from "./AppSelect";
 
 const MAX_RENDERED = 200;
+/** Fired when any combobox opens, so every other one closes (only one dropdown is ever open). */
+const OPENED_EVENT = "app-combobox-opened";
 
 interface Props {
   label?: string;
@@ -30,7 +32,8 @@ export function AppCombobox({ label, options, value, onChange, placeholder, sear
   const root = useRef<HTMLDivElement>(null);
   const search = useRef<HTMLInputElement>(null);
   const list = useRef<HTMLUListElement>(null);
-  const uid = id ?? `cb-${Math.random().toString(36).slice(2, 8)}`;
+  const [autoId] = useState(() => `cb-${Math.random().toString(36).slice(2, 8)}`);
+  const uid = id ?? autoId;
 
   const selected = options.find((o) => String(o.value) === String(value ?? ""));
   const filtered = useMemo(() => {
@@ -39,26 +42,39 @@ export function AppCombobox({ label, options, value, onChange, placeholder, sear
   }, [options, query]);
   const shown = filtered.slice(0, MAX_RENDERED);
   // The first row clears the selection (only when a placeholder/"All" label is provided and the user isn't searching).
-  const items: Array<{ value: string; label: string; clear?: boolean }> = [
+  const items: Array<{ value: string; label: string; clear?: boolean; disabled?: boolean; hint?: string }> = [
     ...(placeholder !== undefined && !query ? [{ value: "", label: placeholder, clear: true }] : []),
-    ...shown.map((o) => ({ value: String(o.value), label: o.label })),
+    ...shown.map((o) => ({ value: String(o.value), label: o.label, disabled: o.disabled, hint: o.hint })),
   ];
 
   useEffect(() => {
     if (!open) return;
     const h = (e: MouseEvent) => { if (root.current && !root.current.contains(e.target as Node)) setOpen(false); };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
+    // Capture phase: modals stop mousedown from bubbling, which would otherwise swallow outside clicks.
+    document.addEventListener("mousedown", h, true);
+    return () => document.removeEventListener("mousedown", h, true);
   }, [open]);
+  useEffect(() => {
+    if (!open) return;
+    window.dispatchEvent(new CustomEvent(OPENED_EVENT, { detail: uid }));
+    const h = (e: Event) => { if ((e as CustomEvent).detail !== uid) setOpen(false); };
+    window.addEventListener(OPENED_EVENT, h);
+    return () => window.removeEventListener(OPENED_EVENT, h);
+  }, [open, uid]);
   useEffect(() => { if (open) { setQuery(""); setTimeout(() => search.current?.focus(), 0); } }, [open]);
-  useEffect(() => { setActive(0); }, [query, open]);
+  useEffect(() => { setActive(Math.max(0, items.findIndex((i) => !i.disabled))); }, [query, open]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { list.current?.children[active]?.scrollIntoView({ block: "nearest" }); }, [active]);
 
+  /** Next enabled row in a direction (stays put at the ends), so arrow keys skip disabled options. */
+  const step = (from: number, dir: 1 | -1) => {
+    for (let i = from + dir; i >= 0 && i < items.length; i += dir) if (!items[i].disabled) return i;
+    return from;
+  };
   const choose = (v: string) => { onChange(v); setOpen(false); };
   const onKey = (e: KeyboardEvent) => {
-    if (e.key === "ArrowDown") { e.preventDefault(); setActive((a) => Math.min(items.length - 1, a + 1)); }
-    else if (e.key === "ArrowUp") { e.preventDefault(); setActive((a) => Math.max(0, a - 1)); }
-    else if (e.key === "Enter") { e.preventDefault(); if (items[active]) choose(items[active].value); }
+    if (e.key === "ArrowDown") { e.preventDefault(); setActive((a) => step(a, 1)); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setActive((a) => step(a, -1)); }
+    else if (e.key === "Enter") { e.preventDefault(); if (items[active] && !items[active].disabled) choose(items[active].value); }
     else if (e.key === "Escape") { e.preventDefault(); setOpen(false); }
   };
 
@@ -84,9 +100,11 @@ export function AppCombobox({ label, options, value, onChange, placeholder, sear
               {items.map((it, n) => {
                 const isSel = String(value ?? "") === it.value;
                 return (
-                  <li key={`${it.value}-${n}`} role="option" aria-selected={isSel} onMouseEnter={() => setActive(n)} onMouseDown={(e) => { e.preventDefault(); choose(it.value); }}
-                    className={`flex cursor-pointer items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm ${n === active ? "bg-indigo-50" : ""} ${it.clear ? "italic text-slate-500" : isSel ? "font-semibold text-indigo-700" : "text-slate-800"}`}>
-                    <span className="truncate">{it.label}</span>{isSel && !it.clear && <Check size={15} className="shrink-0 text-indigo-600" />}
+                  <li key={`${it.value}-${n}`} role="option" aria-selected={isSel} aria-disabled={it.disabled || undefined} onMouseEnter={() => !it.disabled && setActive(n)} onMouseDown={(e) => { e.preventDefault(); if (!it.disabled) choose(it.value); }}
+                    className={`flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm ${it.disabled ? "cursor-not-allowed bg-slate-50 text-slate-400" : `cursor-pointer ${n === active ? "bg-indigo-50" : ""} ${it.clear ? "italic text-slate-500" : isSel ? "font-semibold text-indigo-700" : "text-slate-800"}`}`}>
+                    <span className="truncate">{it.label}</span>
+                    {it.disabled ? <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700">{it.hint ?? "Unavailable"}</span>
+                      : isSel && !it.clear && <Check size={15} className="shrink-0 text-indigo-600" />}
                   </li>
                 );
               })}

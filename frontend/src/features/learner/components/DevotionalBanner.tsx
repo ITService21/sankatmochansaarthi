@@ -7,13 +7,49 @@ const QUOTES = [
   "No task in this world is too difficult when pursued with sincere devotion.",
   "All is One (Sub Ek Hai). Release anxiety and trust divine grace.",
   "Love everyone, serve everyone, remember God, and tell the truth.",
+  "Where there is faith, there is strength; where there is strength, nothing is impossible.",
+  "Do your duty with a calm mind and leave the result to God.",
+  "A steady habit of small efforts becomes a mountain of achievement.",
+  "Knowledge grows when it is shared, and wisdom grows when it is lived.",
+  "Begin with prayer, work with honesty, end with gratitude.",
+  "Patience is the quiet companion of every success.",
+  "Serve without expecting anything; the heart will fill with peace.",
+  "A disciplined mind is the greatest teacher you will ever have.",
+  "Today's effort is tomorrow's confidence.",
+  "Truth is simple. Speak it, live it, and fear nothing.",
+  "Keep learning as if the first day, and serving as if the last.",
+  "Humility opens the door that pride keeps shut.",
+  "Let every mistake be a lesson and every lesson a step forward.",
+  "Remember God in every breath and your path will light itself.",
+  "Hard work done with devotion is itself a prayer.",
+  "Calm the mind and the answers will arrive on their own.",
+  "Gratitude turns what we have into enough.",
+  "Courage is not the absence of fear but faith that walks beside it.",
+  "Kindness costs nothing yet it is worth everything.",
+  "Read a little, think a lot, and practise every day.",
+  "Do not compare your journey with others; walk your own with sincerity.",
+  "Strength grows in the moments when you think you cannot go on.",
+  "Respect your teachers, honour your parents, and love all beings.",
+  "Focus on this one page, this one problem, this one moment.",
+  "Give your best today and let tomorrow take care of itself.",
+  "Faith in God and effort in action together move mountains.",
+  "A pure heart and a clear goal make every road short.",
+  "Wake up with hope, study with focus, sleep with peace.",
 ];
 
-/** Orange header band: logo, rotating devotional quote with portrait, Hindi invocation and a "Next" quote button. */
+/** Index of today's quote: changes once per local calendar day, so everyone sees the same "suvichar" that day. */
+function todayIndex(): number {
+  const now = new Date();
+  const dayNumber = Math.floor(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) / 86_400_000);
+  return dayNumber % QUOTES.length;
+}
+
+/** Orange header band: logo, the quote of the day with portrait, Hindi invocation and a "Next" button to browse more quotes. */
 export function DevotionalBanner() {
-  const [i, setI] = useState(0);
+  const [i, setI] = useState(todayIndex);
+  // Keep a tab that stays open overnight in step with the new day.
   useEffect(() => {
-    const t = window.setInterval(() => setI((n) => (n + 1) % QUOTES.length), 15000);
+    const t = window.setInterval(() => { const d = todayIndex(); setI((cur) => (cur === d ? cur : d)); }, 60 * 60 * 1000);
     return () => window.clearInterval(t);
   }, []);
   return (

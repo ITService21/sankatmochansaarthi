@@ -12,7 +12,7 @@ export type MaterialStatus = "draft" | "published" | "unpublished" | "archived";
 export interface Material {
   id: number; title: string; description: string | null;
   board: NamedRef; class: NamedRef; subject: NamedRef; chapter: NamedRef; topic: NamedRef | null; language: NamedRef;
-  access_type: "free" | "paid"; material_type: { id: number; name: string; code: string | null }; price_minor_units: number | null; currency: string | null;
+  stream: "science" | "commerce" | "general"; access_type: "free" | "paid"; material_type: { id: number; name: string; code: string | null }; price_minor_units: number | null; currency: string | null;
   status: MaterialStatus; original_filename: string; file_size_bytes: number; page_count: number | null;
   preview_page_limit: number; preview_status: "pending" | "ready" | "failed"; published_at: string | null; updated_at: string;
   access: { can_preview: boolean; can_download: boolean; is_downloaded: boolean };

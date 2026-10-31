@@ -8,7 +8,7 @@ import { academicApi, TaxonomyResource } from "../api/academic.api";
  */
 export function useTaxonomyOptions(resource: TaxonomyResource, query: Record<string, string | number | undefined> = {}, enabled = true) {
   const { data, loading } = useAsync(
-    async () => (enabled ? (await academicApi.options(resource, query)).map((i): SelectOption => ({ value: i.id, label: i.name })) : []),
+    async () => (enabled ? (await academicApi.options(resource, query)).map((i): SelectOption => ({ value: i.id, label: i.name, ...(i.coming_soon ? { disabled: true, hint: "Coming soon" } : {}) })) : []),
     [resource, enabled, JSON.stringify(query)],
   );
   return { options: data ?? [], loading };

@@ -1,4 +1,18 @@
 node_modules
 dist
-.env
+dist-ssr
 storage-data
+
+# Environment files in any folder (backend/.env, frontend/.env, .env.production, .env.local ...).
+# Only the *.example templates are committed.
+.env
+.env.*
+!.env.example
+*.local
+
+# Logs and OS/editor noise
+*.log
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea

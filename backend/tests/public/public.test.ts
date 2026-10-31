@@ -24,7 +24,7 @@ describe("GET /public/trending (no login)", () => {
     await execute("INSERT INTO material_entitlements (user_id, material_id, source) VALUES (?,?, 'admin_grant')", [u.id, popular]);
     const r = await api().get("/api/v1/public/trending");
     expect(r.body.data.map((m: any) => m.id)).toEqual([popular, quiet]);
-    expect(r.body.data[0]).toMatchObject({ title: "Popular note", access_type: "paid", price_minor_units: 4900, subject: "Maths", board: "CBSE" });
+    expect(r.body.data[0]).toMatchObject({ title: "Zeros" /* the topic name replaces the stored title */, access_type: "paid", price_minor_units: 4900, subject: "Maths", board: "CBSE" });
     expect(JSON.stringify(r.body)).not.toMatch(/s3_key|study-materials\/|description/);
   });
 

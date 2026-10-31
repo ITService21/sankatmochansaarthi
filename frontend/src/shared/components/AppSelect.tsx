@@ -1,7 +1,11 @@
 import { ChevronDown } from "lucide-react";
 import { SelectHTMLAttributes } from "react";
 
-export interface SelectOption { value: string | number; label: string }
+export interface SelectOption {
+  value: string | number; label: string;
+  /** Shown greyed-out and not selectable (searchable dropdowns); `hint` is the small badge text, e.g. "Coming soon". */
+  disabled?: boolean; hint?: string;
+}
 interface Props extends Omit<SelectHTMLAttributes<HTMLSelectElement>, "onChange" | "value"> {
   label?: string;
   error?: string;

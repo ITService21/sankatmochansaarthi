@@ -4,6 +4,7 @@ import { formatFileSize } from "../../../shared/utils/format-file-size";
 import { Material } from "../../../shared/types";
 import { AccessBadge } from "./MaterialBadges";
 import { BuyButton } from "./MaterialActions";
+import { noteHeading } from "../../../shared/utils/note-heading";
 
 /** Grid card (dashboard / purchases): icon tile, badge, meta, description and a Preview or Buy Now action. */
 export function MaterialCard({ m, onPreview, onPaid }: { m: Material; onPreview: (m: Material) => void; onPaid: () => void }) {
@@ -14,7 +15,7 @@ export function MaterialCard({ m, onPreview, onPaid }: { m: Material; onPreview:
         <SubjectIcon subject={m.subject.name} />
         <div className="min-w-0 flex-1">
           <div className="mb-1 flex flex-wrap items-center gap-2"><AccessBadge m={m} />{m.page_count && <span className="text-xs text-slate-500">{m.page_count} pages</span>}</div>
-          <h3 className="line-clamp-2 font-semibold leading-snug text-slate-900">{m.title}</h3>
+          <h3 className="line-clamp-2 font-semibold leading-snug text-slate-900">{noteHeading(m)}</h3>
         </div>
       </div>
       <p className="mt-2 text-xs text-slate-500">{m.subject.name} · {m.class.name} · {m.board.name}</p>

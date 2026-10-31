@@ -4,6 +4,7 @@ export interface MaterialRow {
   title: string;
   description: string | null;
   slug: string | null;
+  stream: "science" | "commerce" | "general";
   board_id: number; board_name: string;
   class_id: number; class_name: string;
   subject_id: number; subject_name: string;
@@ -37,6 +38,7 @@ export interface MaterialRow {
 export interface MaterialListFilter {
   q?: string;
   board_id?: number; class_id?: number; subject_id?: number; chapter_id?: number; topic_id?: number; language_id?: number;
+  stream?: "science" | "commerce" | "general";
   access_type?: "free" | "paid";
   material_type_id?: number;
   status?: "draft" | "published" | "unpublished" | "archived";
