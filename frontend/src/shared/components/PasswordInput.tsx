@@ -3,10 +3,10 @@ import { InputHTMLAttributes, useState } from "react";
 import { AppInput } from "./AppInput";
 
 /** Password field with a lock icon and a show/hide toggle. */
-export function PasswordInput({ label, error, hint, ...rest }: Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & { label?: string; error?: string; hint?: string }) {
+export function PasswordInput({ label, error, hint, required, ...rest }: Omit<InputHTMLAttributes<HTMLInputElement>, "type" | "required"> & { label?: string; error?: string; hint?: string; required?: boolean }) {
   const [show, setShow] = useState(false);
   return (
-    <AppInput label={label} error={error} hint={hint} type={show ? "text" : "password"} leftIcon={<Lock size={17} />}
+    <AppInput label={label} error={error} hint={hint} required={required} type={show ? "text" : "password"} leftIcon={<Lock size={17} />}
       rightSlot={<button type="button" aria-label={show ? "Hide password" : "Show password"} onClick={() => setShow((s) => !s)} className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-800">{show ? <EyeOff size={17} /> : <Eye size={17} />}</button>}
       {...rest} />
   );

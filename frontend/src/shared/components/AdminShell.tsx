@@ -2,18 +2,26 @@ import { ChevronDown, ExternalLink, GraduationCap, KeyRound, LogOut, LucideIcon,
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import { roleLabel } from "../types";
 import { BrandLogo } from "./BrandLogo";
 
-interface NavItem { to?: string; label: string; icon: LucideIcon; end?: boolean; soon?: boolean }
+interface NavItem { to?: string; label: string; icon: LucideIcon; end?: boolean; soon?: boolean; /** any one of these feature permissions shows the item */ permission?: string[]; superOnly?: boolean }
 
-const ADMIN_NAV: NavItem[] = [
-  { to: "/admin/materials", label: "Manage Notes", icon: GraduationCap },
-  { to: "/admin/academic", label: "Academic Setup", icon: ShieldCheck },
-  { to: "/admin/users", label: "Users", icon: Users },
-  { to: "/admin/callback-requests", label: "Callback Requests", icon: PhoneCall },
-  { to: "/admin/api-hit-logs", label: "API Logs", icon: ScrollText },
-  { to: "/admin/settings", label: "Settings", icon: Settings },
+/** Sidebar entries; each shows only when the signed-in staff member has the matching permission (Super Admin sees all). */
+export const ADMIN_NAV: NavItem[] = [
+  { to: "/admin/materials", label: "Manage Notes", icon: GraduationCap, permission: ["materials.view", "materials.create"] },
+  { to: "/admin/academic", label: "Academic Setup", icon: ShieldCheck, permission: ["academic.manage"] },
+  { to: "/admin/users", label: "Users", icon: Users, permission: ["users.manage"] },
+  { to: "/admin/callback-requests", label: "Callback Requests", icon: PhoneCall, permission: ["callbacks.manage"] },
+  { to: "/admin/api-hit-logs", label: "API Logs", icon: ScrollText, superOnly: true },
+  { to: "/admin/settings", label: "Settings", icon: Settings, permission: ["settings.manage", "site_contact.manage"] },
 ];
+
+/** The staff member's allowed sidebar entries. */
+export function useAllowedNav(): NavItem[] {
+  const { can, isSuper } = useAuth();
+  return ADMIN_NAV.filter((n) => (n.superOnly ? isSuper : !n.permission || n.permission.some(can)));
+}
 
 function NavGroup({ items, onNavigate }: { items: NavItem[]; onNavigate?: () => void }) {
   return (
@@ -37,11 +45,12 @@ function NavGroup({ items, onNavigate }: { items: NavItem[]; onNavigate?: () => 
 }
 
 function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
+  const items = useAllowedNav();
   return (
     <nav className="space-y-6" aria-label="Administration">
       <div>
         <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Administration</p>
-        <NavGroup items={ADMIN_NAV} onNavigate={onNavigate} />
+        <NavGroup items={items} onNavigate={onNavigate} />
       </div>
       <NavLink to="/study-materials" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50"><ExternalLink size={19} />View learner site</NavLink>
     </nav>
@@ -64,7 +73,7 @@ function UserMenu() {
     <div ref={ref} className="relative">
       <button onClick={() => setOpen((o) => !o)} aria-haspopup="menu" aria-expanded={open} className="flex items-center gap-3 rounded-xl px-2 py-1.5 hover:bg-slate-50">
         <span className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-600 text-sm font-semibold text-white">{name.charAt(0).toUpperCase()}</span>
-        <span className="hidden text-left sm:block"><span className="block text-sm font-semibold leading-4 text-slate-900">{name}</span><span className="text-xs text-slate-500">{user?.role}</span></span>
+        <span className="hidden text-left sm:block"><span className="block text-sm font-semibold leading-4 text-slate-900">{name}</span><span className="text-xs text-slate-500">{roleLabel(user?.role ?? "")}</span></span>
         <ChevronDown size={16} className="text-slate-400" />
       </button>
       {open && (
@@ -81,6 +90,8 @@ function UserMenu() {
 export function AdminShell() {
   const nav = useNavigate();
   const loc = useLocation();
+  const { can } = useAuth();
+  const canSearch = can("materials.view");
   const [drawer, setDrawer] = useState(false);
   const [q, setQ] = useState("");
     useEffect(() => { setDrawer(false); }, [loc.pathname]);
@@ -90,12 +101,12 @@ export function AdminShell() {
     <div className="min-h-screen">
       <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b bg-white px-4">
         <button className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden" aria-label="Open menu" onClick={() => setDrawer(true)}><Menu size={22} /></button>
-        <NavLink to="/admin/materials" aria-label="Admin home" className="shrink-0"><BrandLogo height={44} /></NavLink>
-        <form onSubmit={search} role="search" className="relative mx-2 hidden max-w-xl flex-1 md:block">
+        <NavLink to="/admin" aria-label="Admin home" className="shrink-0"><BrandLogo height={44} /></NavLink>
+        {canSearch ? <form onSubmit={search} role="search" className="relative mx-2 hidden max-w-xl flex-1 md:block">
           <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search notes…" aria-label="Search notes"
             className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-3 text-sm outline-none focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-100" />
-        </form>
+        </form> : <span className="flex-1" />}
         <div className="ml-auto"><UserMenu /></div>
       </header>
       <div className="flex">

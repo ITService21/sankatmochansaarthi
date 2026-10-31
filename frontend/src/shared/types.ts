@@ -1,12 +1,21 @@
 /** API shapes shared across features (mirror backend DTOs). */
-export type Role = "Administrator" | "Student" | "Teacher";
+/** "Administrator" is the Super Admin (shown as such in the UI); "Admin" is a delegated account with granted permissions + scope. */
+export type Role = "Administrator" | "Admin" | "Student" | "Teacher";
+export const roleLabel = (r: string) => (r === "Administrator" ? "Super Admin" : r);
+export interface AdminScopes { board_ids: number[]; class_ids: number[]; subject_ids: number[] }
 
-export interface User { id: number; username: string; email: string | null; full_name: string | null; role: Role; must_change_password: boolean; streak_days: number }
+export interface User {
+  id: number; username: string; email: string | null; full_name: string | null; role: Role; must_change_password: boolean; streak_days: number;
+  /** Feature checkboxes (Super Admin = all). */
+  permissions: string[];
+  /** Board/class/subject restriction for an Admin (empty arrays = unrestricted). */
+  scopes: AdminScopes;
+}
 export interface Pagination { page: number; page_size: number; total_items: number; total_pages: number }
 export interface ListResult<T> { data: T[]; pagination: Pagination }
 
 export interface NamedRef { id: number; name: string }
-export interface TaxonomyItem { id: number; name: string; sort_order: number; is_active: boolean; code?: string | null; class_number?: number | null; coming_soon?: boolean; board_id?: number; class_id?: number; subject_id?: number; chapter_id?: number }
+export interface TaxonomyItem { id: number; name: string; sort_order: number; is_active: boolean; code?: string | null; class_number?: number | null; coming_soon?: boolean; board_id?: number; class_id?: number; subject_id?: number; chapter_id?: number; stream?: "science" | "commerce" | "general" }
 
 export type MaterialStatus = "draft" | "published" | "unpublished" | "archived";
 export interface Material {

@@ -6,6 +6,7 @@ import { listQueryShape } from "./study-materials.schemas";
 import { studyMaterialsService as svc } from "./study-materials.service";
 import { MaterialListFilter } from "./study-materials.types";
 import { UploadedFile } from "./pdf-validator";
+import { uploadDraftsService as drafts } from "./upload-drafts.service";
 
 /** HTTP adapters: parse request -> call service -> shape response. No business logic here. */
 export const studyMaterialsController = {
@@ -64,5 +65,35 @@ export const studyMaterialsController = {
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("Cache-Control", "private, no-store");
     stream.on("error", (e) => res.destroy(e)).pipe(res);
+  },
+  // ---- convert-and-review workflow (drafts) ----
+  /** GET /drafts -> `{ data: Draft[] }` the caller's unreviewed conversions */
+  async listDrafts(req: Request, res: Response) {
+    sendData(res, await drafts.list(req.user!));
+  },
+  /** POST /drafts multipart (files[] + metadata fields) -> 201 `{ data: { drafts, failed } }` */
+  async createDrafts(req: Request, res: Response) {
+    sendData(res, await drafts.createFromFiles((req.files as UploadedFile[] | undefined) ?? [], req.body, req.user!), 201);
+  },
+  /** GET /drafts/:id/pdf -> inline converted PDF for the review preview */
+  async draftPdf(req: Request, res: Response) {
+    const { stream, filename } = await drafts.openPdf(parseIdParam(req.params.id), req.user!);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="${encodeURIComponent(filename)}"`);
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("Cache-Control", "private, no-store");
+    stream.on("error", (e) => res.destroy(e)).pipe(res);
+  },
+  /** PATCH /drafts/:id JSON metadata fields -> `{ data: Draft }` */
+  async updateDraft(req: Request, res: Response) {
+    sendData(res, await drafts.updateMetadata(parseIdParam(req.params.id), req.body, req.user!));
+  },
+  /** POST /drafts/:id/accept optional JSON metadata -> 201 `{ data: Material }` */
+  async acceptDraft(req: Request, res: Response) {
+    sendData(res, await drafts.accept(parseIdParam(req.params.id), req.body, req.user!), 201);
+  },
+  /** DELETE /drafts/:id -> `{ data: { id, discarded } }` */
+  async discardDraft(req: Request, res: Response) {
+    sendData(res, await drafts.discard(parseIdParam(req.params.id), req.user!));
   },
 };

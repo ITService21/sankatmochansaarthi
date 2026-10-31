@@ -1,17 +1,19 @@
 import { closePool } from "../infrastructure/database/database";
 import { seedAcademicDemo } from "./academic-demo.seed";
+import { seedDemoChapters } from "./demo-chapters.seed";
 import { seedAcademicClasses } from "./academic-classes.seed";
 import { seedAdministrator } from "./administrator.seed";
 import { seedDefaultAccounts } from "./default-accounts.seed";
 import { seedGlobalConfig } from "./global-config.seed";
 import { seedSampleMaterials } from "./sample-materials.seed";
+import { seedLanguages } from "./languages.seed";
 import { seedMaterialTypes } from "./material-types.seed";
 import { seedRoles } from "./roles.seed";
 import { seedSubscriptionPlans } from "./subscription-plans.seed";
 
 /**
  * Runs every seed in dependency order. Each seed is idempotent, so this is safe to re-run.
- * `--demo` additionally seeds sample academic taxonomy; `--samples` seeds 50 sample notes (dev only);
+ * `--demo` additionally seeds sample academic taxonomy and demo chapters for every board/class/subject/stream; `--samples` seeds 50 sample notes (dev only);
  * `--accounts` creates the default Administrator / student1 / teacher1 accounts (also done by `npm run migrate`).
  */
 export async function runSeeds(opts: { demo?: boolean; samples?: boolean; accounts?: boolean } = {}) {
@@ -24,7 +26,9 @@ export async function runSeeds(opts: { demo?: boolean; samples?: boolean; accoun
   await seedGlobalConfig();
   await seedAcademicClasses();
   await seedMaterialTypes();
+  await seedLanguages();
   const demo = opts.demo ? await seedAcademicDemo() : false;
+  if (opts.demo) await seedDemoChapters(); // chapters for every board/class/subject/stream (idempotent)
   const samples = opts.samples ? await seedSampleMaterials() : 0;
   return { admin, demo, samples, accounts };
 }

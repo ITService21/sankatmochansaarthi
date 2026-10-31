@@ -1,7 +1,8 @@
 import { FormEvent, useState } from "react";
-import { AppButton, AppCheckbox, AppInput, AppModal, AppPagination, AppSelect, AppTable, Column, ConfirmDialog, ErrorState, StatusBadge } from "../../../shared/components";
+import { AppButton, AppCheckbox, AppInput, AppModal, AppPagination, AppSelect, AppTable, Column, ConfirmDialog, DraftNotice, ErrorState, StatusBadge } from "../../../shared/components";
 import { required } from "../../../shared/forms/validation";
 import { useAsync } from "../../../shared/hooks/useAsync";
+import { useFormDraft } from "../../../shared/hooks/useFormDraft";
 import { useMutation } from "../../../shared/hooks/useMutation";
 import { TaxonomyItem } from "../../../shared/types";
 import { academicApi, TaxonomyResource } from "../api/academic.api";
@@ -9,7 +10,7 @@ import { useTaxonomyOptions } from "../components/useTaxonomyOptions";
 
 const TABS: Array<{ key: TaxonomyResource; label: string }> = [
   { key: "boards", label: "Boards" }, { key: "classes", label: "Classes" }, { key: "subjects", label: "Subjects" },
-  { key: "chapters", label: "Chapters" }, { key: "topics", label: "Topics" }, { key: "languages", label: "Languages" }, { key: "material-types", label: "Material types" },
+  { key: "chapters", label: "Chapters" }, { key: "topics", label: "Topics" },   { key: "material-types", label: "Material types" },
 ];
 
 /** Administrator setup of boards, classes, subjects, chapters, topics and languages (no hard-coded academic labels). */
@@ -39,6 +40,7 @@ function ResourcePanel({ resource }: { resource: TaxonomyResource }) {
     { key: "name", header: "Name" },
     ...(resource === "classes" ? [{ key: "class_number", header: "Number" }, { key: "coming_soon", header: "Courses page", render: (i: TaxonomyItem) => (i.coming_soon ? <StatusBadge value="pending" label="Coming soon" /> : <StatusBadge value="active" label="Open" />) }] : []),
     ...(["boards", "subjects", "languages", "material-types"].includes(resource) ? [{ key: "code", header: "Code" }] : []),
+    ...(resource === "chapters" ? [{ key: "stream", header: "Stream", render: (i: TaxonomyItem) => <span className="capitalize">{i.stream === "general" ? "General (all streams)" : i.stream}</span> }] : []),
     { key: "sort_order", header: "Order" },
     { key: "is_active", header: "Status", render: (i: TaxonomyItem) => <StatusBadge value={i.is_active ? "active" : "draft"} label={i.is_active ? "Active" : "Disabled"} /> },
     { key: "act", header: "", render: (i: TaxonomyItem) => (
@@ -71,15 +73,16 @@ function ResourcePanel({ resource }: { resource: TaxonomyResource }) {
 }
 
 function ItemForm({ resource, item, onClose, onSaved }: { resource: TaxonomyResource; item?: TaxonomyItem; onClose: () => void; onSaved: () => void }) {
-  const [name, setName] = useState(item?.name ?? "");
-  const [code, setCode] = useState(item?.code ?? "");
-  const [classNumber, setClassNumber] = useState(item?.class_number != null ? String(item.class_number) : "");
-  const [sort, setSort] = useState(String(item?.sort_order ?? 0));
-  const [comingSoon, setComingSoon] = useState(!!item?.coming_soon);
-  const [board, setBoard] = useState(String(item?.board_id ?? ""));
-  const [cls, setCls] = useState(String(item?.class_id ?? ""));
-  const [subject, setSubject] = useState(String(item?.subject_id ?? ""));
-  const [chapter, setChapter] = useState(String(item?.chapter_id ?? ""));
+  // All fields live in one draft so they survive closing the dialog (cleared after saving or "Discard changes").
+  const draft = useFormDraft(`taxonomy-${resource}-${item?.id ?? "new"}`, {
+    name: item?.name ?? "", code: item?.code ?? "", classNumber: item?.class_number != null ? String(item.class_number) : "", sort: String(item?.sort_order ?? 0),
+    comingSoon: !!item?.coming_soon, stream: (item?.stream ?? "general") as string, board: String(item?.board_id ?? ""), cls: String(item?.class_id ?? ""), subject: String(item?.subject_id ?? ""), chapter: String(item?.chapter_id ?? ""),
+  });
+  const { name, code, classNumber, sort, comingSoon, stream, board, cls, subject, chapter } = draft.value;
+  const up = (patch: Partial<typeof draft.value>) => draft.set({ ...draft.value, ...patch });
+  const setName = (v: string) => up({ name: v }); const setCode = (v: string) => up({ code: v }); const setClassNumber = (v: string) => up({ classNumber: v });
+  const setSort = (v: string) => up({ sort: v }); const setComingSoon = (v: boolean) => up({ comingSoon: v });
+  const setStream = (v: string) => up({ stream: v }); const setBoard = (v: string) => up({ board: v }); const setCls = (v: string) => up({ cls: v }); const setSubject = (v: string) => up({ subject: v }); const setChapter = (v: string) => up({ chapter: v });
   const [touched, setTouched] = useState(false);
   const boards = useTaxonomyOptions("boards", {}, resource === "chapters");
   const classes = useTaxonomyOptions("classes", {}, resource === "chapters");
@@ -92,9 +95,10 @@ function ItemForm({ resource, item, onClose, onSaved }: { resource: TaxonomyReso
     const body: Record<string, unknown> = { name: name.trim(), sort_order: Number(sort) || 0 };
     if (["boards", "subjects", "languages", "material-types"].includes(resource)) body.code = code.trim() || null;
     if (resource === "classes") { body.class_number = classNumber === "" ? null : Number(classNumber); body.coming_soon = comingSoon; }
-    if (resource === "chapters") Object.assign(body, { board_id: +board, class_id: +cls, subject_id: +subject });
+    if (resource === "chapters") Object.assign(body, { board_id: +board, class_id: +cls, subject_id: +subject, stream });
     if (resource === "topics") body.chapter_id = +chapter;
     if (item) await academicApi.update(resource, item.id, body); else await academicApi.create(resource, body);
+    draft.clear();
     onSaved();
   });
   const submit = (e: FormEvent) => { e.preventDefault(); setTouched(true); if (!nameErr && !parentErr) void save.run(); };
@@ -103,13 +107,15 @@ function ItemForm({ resource, item, onClose, onSaved }: { resource: TaxonomyReso
     <AppModal open title={item ? "Edit" : "Add"} onClose={onClose}>
       <form onSubmit={submit} noValidate className="space-y-3">
         {resource === "chapters" && <>
-          <AppSelect label="Board" placeholder="Select…" options={boards.options} value={board} onChange={setBoard} />
-          <AppSelect label="Class" placeholder="Select…" options={classes.options} value={cls} onChange={setCls} />
-          <AppSelect label="Subject" placeholder="Select…" options={subjects.options} value={subject} onChange={setSubject} />
+          <AppSelect required label="Board" placeholder="Select…" options={boards.options} value={board} onChange={setBoard} />
+          <AppSelect required label="Class" placeholder="Select…" options={classes.options} value={cls} onChange={setCls} />
+          <AppSelect required label="Stream" options={[{ value: "general", label: "General (valid for every stream)" }, { value: "science", label: "Science" }, { value: "commerce", label: "Commerce" }]} value={stream} onChange={setStream}
+            hint="A Science chapter only appears when a note's stream is Science; “General” chapters appear for every stream." />
+          <AppSelect required label="Subject" placeholder="Select…" options={subjects.options} value={subject} onChange={setSubject} />
         </>}
-        {resource === "topics" && <AppSelect label="Chapter" placeholder="Select…" options={chapters.options} value={chapter} onChange={setChapter} />}
+        {resource === "topics" && <AppSelect required label="Chapter" placeholder="Select…" options={chapters.options} value={chapter} onChange={setChapter} />}
         {touched && parentErr && <p role="alert" className="text-xs text-red-600">{parentErr}</p>}
-        <AppInput label="Name" value={name} onChange={(e) => setName(e.target.value)} error={touched ? nameErr : undefined} />
+        <AppInput required label="Name" value={name} onChange={(e) => setName(e.target.value)} error={touched ? nameErr : undefined} />
         {["boards", "subjects", "languages", "material-types"].includes(resource) && <AppInput label="Code" value={code} onChange={(e) => setCode(e.target.value)} />}
         {resource === "classes" && <>
           <AppInput label="Class number" inputMode="numeric" value={classNumber} onChange={(e) => setClassNumber(e.target.value)} />
@@ -117,8 +123,9 @@ function ItemForm({ resource, item, onClose, onSaved }: { resource: TaxonomyReso
         </>}
         <AppInput label="Sort order" inputMode="numeric" value={sort} onChange={(e) => setSort(e.target.value)} />
         {save.error != null && <ErrorState error={save.error} />}
+        <DraftNotice dirty={draft.dirty} restored={draft.restored} onDiscard={() => { draft.clear(); onClose(); }} />
         <div className="flex justify-end gap-2">
-          <AppButton variant="secondary" onClick={onClose}>Cancel</AppButton>
+          <AppButton variant="secondary" onClick={onClose}>Close</AppButton>
           <AppButton type="submit" loading={save.loading}>Save</AppButton>
         </div>
       </form>

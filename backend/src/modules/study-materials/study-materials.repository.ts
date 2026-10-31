@@ -39,6 +39,9 @@ export const studyMaterialsRepository = {
     eq("sm.board_id", f.board_id); eq("sm.class_id", f.class_id); eq("sm.subject_id", f.subject_id);
     eq("sm.chapter_id", f.chapter_id); eq("sm.topic_id", f.topic_id); eq("sm.language_id", f.language_id); eq("sm.stream", f.stream);
     eq("sm.access_type", f.access_type); eq("sm.material_type_id", f.material_type_id); eq("sm.status", f.status);
+    if (f.scope?.board_ids) { where.push("sm.board_id IN (?)"); params.push(f.scope.board_ids); }
+    if (f.scope?.class_ids) { where.push("sm.class_id IN (?)"); params.push(f.scope.class_ids); }
+    if (f.scope?.subject_ids) { where.push("sm.subject_id IN (?)"); params.push(f.scope.subject_ids); }
     if (f.purchased_by !== undefined) {
       const now = new Date();
       where.push(`sm.id IN (SELECT material_id FROM material_entitlements

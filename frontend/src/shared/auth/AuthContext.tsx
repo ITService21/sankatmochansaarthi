@@ -1,5 +1,6 @@
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { http, setUnauthorizedHandler, tokenStore } from "../api/http-client";
+import { clearAllDrafts } from "../hooks/useFormDraft";
 import { Role, User } from "../types";
 
 interface AuthState {
@@ -12,6 +13,12 @@ interface AuthState {
   refresh: () => Promise<void>;
   /** Completes a social sign-in: stores the token issued by the backend and loads the profile. */
   loginWithToken: (token: string) => Promise<User>;
+  /** UX check only (the API enforces it): may the signed-in user use this feature? Super Admin = always. */
+  can: (permission: string) => boolean;
+  /** Super Admin (the Administrator role). */
+  isSuper: boolean;
+  /** Super Admin or Admin: allowed into /admin at all. */
+  isStaff: boolean;
 }
 
 const Ctx = createContext<AuthState | null>(null);
@@ -21,7 +28,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [initialising, setInitialising] = useState(!!tokenStore.get());
 
-  const logout = useCallback(() => { tokenStore.clear(); setUser(null); }, []);
+  const logout = useCallback(() => { tokenStore.clear(); clearAllDrafts(); setUser(null); }, []);
   const refresh = useCallback(async () => { setUser(await http.get<User>("/auth/me")); }, []);
 
   useEffect(() => {
@@ -32,6 +39,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<AuthState>(() => ({
     user, initialising, logout, refresh,
+    isSuper: user?.role === "Administrator",
+    isStaff: user?.role === "Administrator" || user?.role === "Admin",
+    can: (permission) => user?.role === "Administrator" || (user?.role === "Admin" && user.permissions.includes(permission)),
     login: async (username, password) => {
       const r = await http.post<{ token: string; user: User }>("/auth/login", { username, password });
       tokenStore.set(r.token); setUser(r.user); return r.user;

@@ -30,7 +30,7 @@ export function AppTable<T>({ columns, rows, rowKey, loading, emptyMessage = "No
         <tbody className="divide-y divide-slate-100">
           {rows.map((r) => (
             <tr key={rowKey(r)} onClick={onRowClick ? () => onRowClick(r) : undefined} className={onRowClick ? "cursor-pointer hover:bg-slate-50" : ""}>
-              {columns.map((c) => <td key={c.key} className={`px-3 py-2 align-top ${c.className ?? ""}`}>{c.render ? c.render(r) : String((r as Record<string, unknown>)[c.key] ?? "—")}</td>)}
+              {columns.map((c) => <td key={c.key} className={`px-3 py-2 align-top ${c.key === "actions" ? "whitespace-nowrap" : ""} ${c.className ?? ""}`}>{c.render ? c.render(r) : String((r as Record<string, unknown>)[c.key] ?? "—")}</td>)}
             </tr>
           ))}
         </tbody>

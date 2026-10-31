@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
 import { env } from "../../config/env";
-import { ROLES, SELF_REGISTERABLE_ROLES } from "../../config/roles";
+import { ROLES, SELF_REGISTERABLE_ROLES, STAFF_ROLES } from "../../config/roles";
 import { signToken } from "../../common/auth/authenticate";
 import { recordAudit } from "../../common/audit/audit.service";
 import { AppError } from "../../common/errors/app-error";
@@ -86,7 +86,7 @@ export const oauthService = {
     if (!user.is_active) throw new AppError(403, "ACCOUNT_BLOCKED", "This account has been blocked. Please contact support.");
     const streak = await activityService.touch(user.id);
     return {
-      token: signToken(user.id),
+      token: signToken(user.id, user.role),
       user: { id: user.id, username: user.username, email: user.email, full_name: user.full_name, role: user.role, must_change_password: !!user.must_change_password, streak_days: streak },
     };
   },
@@ -97,7 +97,7 @@ async function resolveUser(provider: string, profile: OAuthProfile, role: string
   const known = await queryOne<UserRow>(
     `${USER_SELECT} JOIN user_identities i ON i.user_id = u.id WHERE i.provider = ? AND i.provider_user_id = ? AND u.deleted_at IS NULL`, [provider, profile.providerUserId]);
   if (known) {
-    if (known.role === ROLES.ADMINISTRATOR) throw new AppError(403, "ADMIN_ACCOUNT", "Administrators must sign in with their username and password.");
+    if (STAFF_ROLES.includes(known.role)) throw new AppError(403, "ADMIN_ACCOUNT", "Admin accounts must sign in with their username and password.");
     return known;
   }
 
@@ -106,7 +106,7 @@ async function resolveUser(provider: string, profile: OAuthProfile, role: string
     if (profile.email && profile.emailVerified) {
       const existing = await queryOne<UserRow>(`${USER_SELECT} WHERE LOWER(u.email) = LOWER(?) AND u.deleted_at IS NULL LIMIT 1`, [profile.email], conn);
       if (existing) {
-        if (existing.role === ROLES.ADMINISTRATOR) throw new AppError(403, "ADMIN_ACCOUNT", "This email belongs to an administrator account. Sign in with your username and password.");
+        if (STAFF_ROLES.includes(existing.role)) throw new AppError(403, "ADMIN_ACCOUNT", "This email belongs to an admin account. Sign in with your username and password.");
         await execute("INSERT IGNORE INTO user_identities (user_id, provider, provider_user_id, email) VALUES (?,?,?,?)", [existing.id, provider, profile.providerUserId, profile.email], conn);
         await recordAudit(conn, existing.id, "user.link-identity", "users", existing.id, { provider });
         return existing;

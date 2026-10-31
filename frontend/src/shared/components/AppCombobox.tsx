@@ -1,5 +1,6 @@
 import { Check, ChevronDown, Search, X } from "lucide-react";
 import { KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
+import { FieldLabel } from "./FieldLabel";
 import { SelectOption } from "./AppSelect";
 
 const MAX_RENDERED = 200;
@@ -18,6 +19,10 @@ interface Props {
   error?: string;
   className?: string;
   id?: string;
+  /** Marks the field as mandatory (red asterisk + aria-required). */
+  required?: boolean;
+  /** Shown in the open list when there is nothing to choose from (e.g. "No chapters for this combination yet"). */
+  emptyMessage?: string;
 }
 
 /**
@@ -25,7 +30,7 @@ interface Props {
  * Only the first 200 matches are rendered, so it stays fast with thousands of records — keep typing to narrow down.
  * Same props as AppSelect, so it is a drop-in replacement.
  */
-export function AppCombobox({ label, options, value, onChange, placeholder, searchPlaceholder = "Type to search…", disabled, error, className = "", id }: Props) {
+export function AppCombobox({ label, options, value, onChange, placeholder, searchPlaceholder = "Type to search…", disabled, error, className = "", id, required, emptyMessage }: Props) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
@@ -75,14 +80,14 @@ export function AppCombobox({ label, options, value, onChange, placeholder, sear
     if (e.key === "ArrowDown") { e.preventDefault(); setActive((a) => step(a, 1)); }
     else if (e.key === "ArrowUp") { e.preventDefault(); setActive((a) => step(a, -1)); }
     else if (e.key === "Enter") { e.preventDefault(); if (items[active] && !items[active].disabled) choose(items[active].value); }
-    else if (e.key === "Escape") { e.preventDefault(); setOpen(false); }
+    else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); setOpen(false); } // Esc closes just the list, not the dialog around it
   };
 
   return (
     <div className={className} ref={root}>
-      {label && <label htmlFor={uid} className="mb-1 block text-sm font-medium text-slate-700">{label}</label>}
+      {label && <FieldLabel htmlFor={uid} required={required}>{label}</FieldLabel>}
       <div className="relative">
-        <button id={uid} type="button" role="combobox" aria-expanded={open} aria-haspopup="listbox" aria-controls={`${uid}-list`} disabled={disabled}
+        <button id={uid} type="button" role="combobox" aria-required={required || undefined} aria-expanded={open} aria-haspopup="listbox" aria-controls={`${uid}-list`} disabled={disabled}
           onClick={() => setOpen((o) => !o)}
           className={`flex w-full items-center justify-between gap-2 rounded-lg border bg-white py-2 pl-3 pr-3 text-left text-sm outline-none focus:ring-2 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400 ${error ? "border-red-500" : "border-slate-300"}`}>
           <span className={`truncate ${selected ? "text-slate-900" : "text-slate-500"}`}>{selected?.label ?? placeholder ?? "Select…"}</span>
@@ -108,7 +113,8 @@ export function AppCombobox({ label, options, value, onChange, placeholder, sear
                   </li>
                 );
               })}
-              {items.length === 0 || (query && shown.length === 0) ? <li className="px-3 py-4 text-center text-sm text-slate-500">No matches for “{query}”</li> : null}
+              {query && shown.length === 0 ? <li className="px-3 py-4 text-center text-sm text-slate-500">No matches for “{query}”</li> : null}
+              {!query && shown.length === 0 ? <li className="px-3 py-4 text-center text-sm text-slate-500">{emptyMessage ?? "Nothing to choose from yet"}</li> : null}
             </ul>
             {filtered.length > MAX_RENDERED && <p className="border-t border-slate-100 px-3 py-1.5 text-xs text-slate-500">Showing {MAX_RENDERED} of {filtered.length} — keep typing to narrow down.</p>}
           </div>

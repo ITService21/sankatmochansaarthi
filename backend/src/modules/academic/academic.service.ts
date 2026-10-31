@@ -20,6 +20,8 @@ export function listQueryShape(def: TaxonomyDef) {
     search: qText(100).optional(),
     is_active: qBool().optional(),
     ...Object.fromEntries(Object.keys(def.parents).map((c) => [c, qId().optional()])),
+    // Chapters only: `stream=science` returns science chapters AND "general" ones (valid for every stream).
+    ...(def.path === "chapters" ? { stream: z.enum(["science", "commerce", "general"]).optional() } : {}),
     page: paginationShape.page,
     page_size: paginationShape.page_size,
     sort_by: z.enum(["sort_order", "name", "created_at", "id"]).default("sort_order"),
@@ -50,6 +52,10 @@ export const academicService = {
         where.push(`${col} = ?`);
         params.push(q[col]);
       }
+    }
+    if (q.stream) {
+      where.push("stream IN (?, 'general')");
+      params.push(q.stream);
     }
     if (q.search) {
       where.push("name LIKE ?");
@@ -179,6 +185,8 @@ export interface TaxonomySelection {
   chapter_id: number;
   topic_id?: number | null;
   language_id: number;
+  /** When given, the chapter must be "general" or the same stream. */
+  stream?: "science" | "commerce" | "general";
 }
 
 /**
@@ -198,8 +206,11 @@ export async function assertTaxonomyConsistent(sel: TaxonomySelection, conn?: Po
   await active("academic_subjects", sel.subject_id, "Subject");
   await active("languages", sel.language_id, "Language");
   await active("academic_chapters", sel.chapter_id, "Chapter");
-  const chapter = (await queryOne<{ board_id: number; class_id: number; subject_id: number }>(
-    "SELECT board_id, class_id, subject_id FROM academic_chapters WHERE id = ?", [sel.chapter_id], conn))!;
+  const chapter = (await queryOne<{ board_id: number; class_id: number; subject_id: number; stream: string }>(
+    "SELECT board_id, class_id, subject_id, stream FROM academic_chapters WHERE id = ?", [sel.chapter_id], conn))!;
+  if (sel.stream && chapter.stream !== "general" && chapter.stream !== sel.stream) {
+    throw badRequest(`Chapter belongs to the ${chapter.stream} stream, not ${sel.stream}`);
+  }
   if (chapter.board_id !== sel.board_id || chapter.class_id !== sel.class_id || chapter.subject_id !== sel.subject_id) {
     throw badRequest("Chapter does not belong to the selected board, class and subject");
   }

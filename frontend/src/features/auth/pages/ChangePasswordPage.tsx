@@ -23,8 +23,8 @@ export function ChangePasswordPage() {
   return (
     <AuthLayout title="Change password" subtitle={user?.must_change_password ? "You must set a new password before continuing." : "Choose a new password for your account."}>
       <form onSubmit={submit} className="space-y-3" noValidate>
-        <PasswordInput label="Current password" autoComplete="current-password" placeholder="Enter your current password" value={current} onChange={(e) => setCurrent(e.target.value)} error={touched ? required(current, "Current password") : undefined} />
-        <div><PasswordInput label="New password" autoComplete="new-password" placeholder="Create a strong password" value={next} onChange={(e) => setNext(e.target.value)} error={touched ? passwordPolicy(next) : undefined} /><PasswordStrength value={next} /></div>
+        <PasswordInput required label="Current password" autoComplete="current-password" placeholder="Enter your current password" value={current} onChange={(e) => setCurrent(e.target.value)} error={touched ? required(current, "Current password") : undefined} />
+        <div><PasswordInput required label="New password" autoComplete="new-password" placeholder="Create a strong password" value={next} onChange={(e) => setNext(e.target.value)} error={touched ? passwordPolicy(next) : undefined} /><PasswordStrength value={next} /></div>
         {m.error != null && <ErrorState error={m.error} />}
         <AppButton type="submit" loading={m.loading} className="w-full">Update password</AppButton>
       </form>

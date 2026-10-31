@@ -63,12 +63,12 @@ export const TAXONOMY: Record<string, TaxonomyDef> = {
   },
   chapters: {
     path: "chapters", table: "academic_chapters", label: "Chapter",
-    extraFields: {}, parents: { board_id: "academic_boards", class_id: "academic_classes", subject_id: "academic_subjects" },
+    extraFields: { stream: z.enum(["science", "commerce", "general"]).default("general") }, parents: { board_id: "academic_boards", class_id: "academic_classes", subject_id: "academic_subjects" },
     referencedBy: [
       { table: "academic_topics", column: "chapter_id", label: "topics" },
       { table: "study_materials", column: "chapter_id", label: "study materials" },
     ],
-    lockedWhenReferenced: ["board_id", "class_id", "subject_id"],
+    lockedWhenReferenced: ["board_id", "class_id", "subject_id", "stream"],
   },
   topics: {
     path: "topics", table: "academic_topics", label: "Topic",

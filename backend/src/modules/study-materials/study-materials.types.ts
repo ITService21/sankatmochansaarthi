@@ -45,6 +45,8 @@ export interface MaterialListFilter {
   purchased?: boolean;
   /** Set by the service (never by clients) when `purchased=true`: the user whose entitlements restrict the list. */
   purchased_by?: number;
+  /** Set by the service for Admin accounts: only notes inside their board/class/subject scope (never client-supplied). */
+  scope?: { board_ids?: number[]; class_ids?: number[]; subject_ids?: number[] };
   downloaded?: boolean;
   /** Set by the service when `downloaded=true`. */
   downloaded_by?: number;

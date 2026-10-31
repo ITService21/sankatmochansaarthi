@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { AppButton, AppInput, ErrorState, LoadingState } from "../../../shared/components";
+import { useAuth } from "../../../shared/auth/AuthContext";
 import { useAsync } from "../../../shared/hooks/useAsync";
 import { useMutation } from "../../../shared/hooks/useMutation";
 import { Setting } from "../../../shared/types";
@@ -8,13 +9,16 @@ import { SiteContactForm } from "../components/SiteContactForm";
 
 /** Administrator runtime settings: log retention days (default 90 ≈ 3 months) and preview page limit. */
 export function SettingsPage() {
-  const { data, error, loading, reload } = useAsync(() => adminApi.settings(), []);
+  const { can } = useAuth();
+  const canSettings = can("settings.manage"), canContact = can("site_contact.manage");
+  // Each block appears only for staff who hold its permission (the server enforces the same rule).
+  const { data, error, loading, reload } = useAsync(() => (canSettings ? adminApi.settings() : Promise.resolve([] as Setting[])), [canSettings]);
   if (loading) return <LoadingState />;
   if (error != null) return <ErrorState error={error} onRetry={reload} />;
   return (
     <div>
       <h1 className="mb-4 text-2xl font-semibold">Settings</h1>
-      <div className="space-y-4">{data!.map((s) => <SettingRow key={s.key} setting={s} onSaved={reload} />)}<SiteContactForm /></div>
+      <div className="space-y-4">{data!.map((s) => <SettingRow key={s.key} setting={s} onSaved={reload} />)}{canContact && <SiteContactForm />}</div>
     </div>
   );
 }

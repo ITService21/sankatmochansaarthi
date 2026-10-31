@@ -47,6 +47,8 @@ Then disable root/password SSH login (`PermitRootLogin no`, `PasswordAuthenticat
 
 ```bash
 sudo apt install -y nginx mariadb-server git curl build-essential
+# Word (.doc/.docx) -> PDF in the "Add notes" flow. Optional but strongly recommended: without it only a basic text-only conversion exists.
+sudo apt install -y libreoffice-writer
 # Node 20 LTS (Node 18 is end-of-life). The app was developed/tested on Node 18; it uses nothing Node-20-incompatible,
 # but run `npm test` (needs a test DB) once on the server's Node version if you want certainty.
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash - && sudo apt install -y nodejs
@@ -103,6 +105,10 @@ S3_BUCKET=<your-private-bucket>
 AWS_ACCESS_KEY_ID=<iam user key>
 AWS_SECRET_ACCESS_KEY=<iam user secret>
 MAX_UPLOAD_MB=25
+MAX_UPLOAD_FILES=10                 # files per "Add notes" batch
+DRAFT_RETENTION_DAYS=14
+DOCX_CONVERTER=auto                # LibreOffice if installed (recommended: see §2), else basic text conversion
+ADMIN_JWT_EXPIRES_IN=7d            # Super Admin / Admin session length
 
 PAYMENT_PROVIDER=razorpay
 RAZORPAY_KEY_ID=<key id>
@@ -133,6 +139,8 @@ types, and these accounts (only if missing — an existing account's password is
 | Administrator | `Administrator` | `Admin@18212004` |
 | Student | `student1` | `Student@12345` |
 | Teacher | `teacher1` | `Teacher@12345` |
+| Admin (CBSE notes only) | `admin_cbse` | `AdminCbse@12345` |
+| Admin (ICSE notes only) | `admin_icse` | `AdminIcse@12345` |
 
 > **These passwords are in the source code.** Anyone who can read the repository can log in as the Administrator.
 > Keep the repo private, and **change the Administrator password right after the first login** (user menu → Change
@@ -201,7 +209,7 @@ server {
     root /var/www/saarthi-site;
     index index.html;
 
-    client_max_body_size 30m;                 # must be >= MAX_UPLOAD_MB (PDF uploads)
+    client_max_body_size 300m;                # >= MAX_UPLOAD_MB x MAX_UPLOAD_FILES (a whole "Add notes" batch in one request)
 
     add_header X-Content-Type-Options nosniff always;
     add_header X-Frame-Options SAMEORIGIN always;
@@ -258,6 +266,7 @@ cd ../frontend && npm ci && npm run build && sudo rsync -a --delete dist/ /var/w
 ## 11. Go-live checklist
 
 - [ ] `curl https://yourdomain.in/health` returns `{"status":"ok"}`; site loads over HTTPS.
+- [ ] Create your Admin accounts (Users → Add user → Admin) and tick only the features/boards they need.
 - [ ] Log in as `Administrator` and **change the password** (the default is in the source code). Remove or change `student1` / `teacher1` in Admin → Users.
 - [ ] Admin → Settings: enter real **contact details** (the page ships with placeholder phone/email/address).
 - [ ] Admin → Academic Setup: boards, classes (set which are "coming soon"), subjects, chapters, topics, material types.
@@ -273,7 +282,8 @@ cd ../frontend && npm ci && npm run build && sudo rsync -a --delete dist/ /var/w
 |---|---|
 | 502 Bad Gateway | `systemctl status saarthi-api`; `journalctl -u saarthi-api -n 100` (usually a bad `.env` value or DB credentials). |
 | Login returns 500 | DB unreachable or migrations not run: `npm run migrate`. |
-| Upload fails with 413 | Raise `client_max_body_size` (Nginx) and `MAX_UPLOAD_MB` together. |
+| Upload fails with 413 | Raise `client_max_body_size` (Nginx) to at least `MAX_UPLOAD_MB` × `MAX_UPLOAD_FILES`. |
+| Word files convert with "Basic conversion" | LibreOffice is not installed: `sudo apt install libreoffice-writer`, then restart the API. |
 | Payments never complete | Webhook URL/secret mismatch; `PAYMENT_PROVIDER` still `fake`; check Razorpay webhook delivery log. |
 | Google/Microsoft "redirect_uri_mismatch" | Redirect URI in the provider console must match `OAUTH_REDIRECT_BASE` exactly (https, no trailing slash). |
 | Lost Administrator password | Set `ADMIN_BOOTSTRAP_PASSWORD` in `.env`, then `cd backend && npm run admin:reset -- --keep-password`. |

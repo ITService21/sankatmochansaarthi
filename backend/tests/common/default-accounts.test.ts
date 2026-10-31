@@ -12,7 +12,7 @@ describe("default accounts seed (run by `npm run migrate`)", () => {
   it("creates the Administrator, student1 and teacher1 with the documented passwords and roles", async () => {
     await getPoolForTests().query("DELETE FROM users WHERE username IN ('student1','teacher1')");
     await execute("DELETE FROM users WHERE username = 'Administrator'");
-    expect((await seedDefaultAccounts()).sort()).toEqual(["Administrator", "student1", "teacher1"]);
+    expect((await seedDefaultAccounts()).sort()).toEqual(["Administrator", "admin_cbse", "admin_icse", "student1", "teacher1"]);
     const expected = [["Administrator", "Admin@18212004", "Administrator"], ["student1", "Student@12345", "Student"], ["teacher1", "Teacher@12345", "Teacher"]];
     for (const [u, p, role] of expected) {
       const r = await login(u, p);
@@ -21,10 +21,24 @@ describe("default accounts seed (run by `npm run migrate`)", () => {
     }
   });
 
+  it("also seeds admin_cbse and admin_icse: Admin role, note permissions, limited to their own board", async () => {
+    for (const [u, p, board] of [["admin_cbse", "AdminCbse@12345", "CBSE"], ["admin_icse", "AdminIcse@12345", "ICSE"]]) {
+      const r = await login(u, p);
+      expect(r.status).toBe(200);
+      expect(r.body.data.user).toMatchObject({ username: u, role: "Admin", must_change_password: false });
+      expect(r.body.data.user.permissions).toEqual(["materials.create", "materials.delete", "materials.edit", "materials.publish", "materials.view"]);
+      const boards = await queryRows<{ id: number }>("SELECT id FROM academic_boards WHERE name = ? AND deleted_at IS NULL", [board]);
+      expect(boards).toHaveLength(1);
+      expect(r.body.data.user.scopes).toEqual({ board_ids: [boards[0].id], class_ids: [], subject_ids: [] });
+    }
+    expect(await seedDefaultAccounts()).toEqual([]); // second run adds nothing and does not duplicate the boards
+    expect(await queryRows("SELECT id FROM academic_boards WHERE name IN ('CBSE','ICSE')")).toHaveLength(2);
+  });
+
   it("stores only bcrypt hashes, never the plaintext", async () => {
-    const rows = await queryRows<{ password_hash: string }>("SELECT password_hash FROM users WHERE username IN ('Administrator','student1','teacher1')");
-    expect(rows).toHaveLength(3);
-    for (const r of rows) { expect(r.password_hash).toMatch(/^\$2[aby]\$/); expect(r.password_hash).not.toMatch(/Admin@|Student@|Teacher@/); }
+    const rows = await queryRows<{ password_hash: string }>("SELECT password_hash FROM users WHERE username IN ('Administrator','student1','teacher1','admin_cbse','admin_icse')");
+    expect(rows).toHaveLength(5);
+    for (const r of rows) { expect(r.password_hash).toMatch(/^\$2[aby]\$/); expect(r.password_hash).not.toMatch(/Admin@|Student@|Teacher@|AdminCbse|AdminIcse/); }
   });
 
   it("is idempotent and NEVER overwrites a password someone has changed", async () => {

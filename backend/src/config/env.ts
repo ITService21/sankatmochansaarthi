@@ -26,6 +26,8 @@ export const env = {
   corsOrigin: str("CORS_ORIGIN", "http://localhost:5173"),
   jwtSecret: str("JWT_SECRET", process.env.NODE_ENV === "production" ? undefined : "dev-only-secret-change-me"),
   jwtExpiresIn: str("JWT_EXPIRES_IN", "8h"),
+  /** Session length for Administrator / Admin accounts (7 days). */
+  adminJwtExpiresIn: str("ADMIN_JWT_EXPIRES_IN", "7d"),
   db: {
     host: str("DB_HOST", "127.0.0.1"),
     port: num("DB_PORT", 3306),
@@ -53,6 +55,15 @@ export const env = {
     microsoft: { clientId: process.env.MICROSOFT_CLIENT_ID ?? "", clientSecret: process.env.MICROSOFT_CLIENT_SECRET ?? "", tenant: str("MICROSOFT_TENANT", "common") },
   },
   maxUploadMb: num("MAX_UPLOAD_MB", 25),
+  upload: {
+    /** Most files accepted in one "convert & review" batch. */
+    maxFiles: num("MAX_UPLOAD_FILES", 10),
+    /** Converted-but-not-accepted files are discarded after this many days. */
+    draftRetentionDays: num("DRAFT_RETENTION_DAYS", 14),
+    /** Word conversion: "auto" (LibreOffice when installed, else basic text conversion), "libreoffice" or "basic". */
+    docxConverter: str("DOCX_CONVERTER", "auto") as "auto" | "libreoffice" | "basic",
+    libreOfficeBin: str("LIBREOFFICE_BIN", "soffice"),
+  },
   payment: {
     provider: str("PAYMENT_PROVIDER", "fake") as "fake" | "razorpay",
     webhookSecret: str("PAYMENT_WEBHOOK_SECRET", "dev-webhook-secret"),

@@ -20,7 +20,7 @@ export function AppButton({ variant = "primary", loading, size = "md", className
     <button
       type={type}
       disabled={disabled || loading}
-      className={`inline-flex items-center justify-center gap-2 rounded-lg font-medium shadow-sm transition disabled:cursor-not-allowed ${size === "sm" ? "px-2.5 py-1 text-xs" : "px-4 py-2 text-sm"} ${styles[variant]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-medium shadow-sm transition disabled:cursor-not-allowed ${size === "sm" ? "px-2.5 py-1 text-xs" : "px-4 py-2 text-sm"} ${styles[variant]} ${className}`}
       {...rest}
     >
       {loading && <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden />}

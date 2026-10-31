@@ -1,15 +1,15 @@
 import { Router } from "express";
 import { z } from "zod";
 import { authenticate } from "../../common/auth/authenticate";
-import { requireAdministrator } from "../../common/auth/require-role";
+import { requirePermission } from "../../common/auth/require-role";
 import { asyncHandler } from "../../common/http/async-handler";
 import { sendData } from "../../common/http/responses";
 import { parseBody } from "../../common/validation/validate-body";
 import { settingsService } from "./settings.service";
 
-/** Administrator-only runtime settings (log retention days, preview page limit). Mounted at /api/v1/admin/settings. */
+/** Runtime settings (Super Admin, or an Admin granted "settings.manage") (log retention days, preview page limit). Mounted at /api/v1/admin/settings. */
 export const settingsRouter = Router();
-settingsRouter.use(authenticate(), requireAdministrator);
+settingsRouter.use(authenticate(), requirePermission("settings.manage"));
 
 /** GET / -> `{ data: SettingView[] }` */
 settingsRouter.get("/", asyncHandler(async (_req, res) => sendData(res, await settingsService.list())));

@@ -4,6 +4,7 @@ import { SELF_REGISTERABLE_ROLES } from "../../config/roles";
 import { badRequest, conflict, unauthorized } from "../../common/errors/app-error";
 import { signToken } from "../../common/auth/authenticate";
 import { execute, queryOne } from "../../infrastructure/database/database";
+import { loadAccess } from "../admin-access/admin-access.service";
 import { activityService } from "../activity/activity.service";
 
 /** Password policy shared by register and change-password. */
@@ -36,8 +37,13 @@ interface UserRow {
 }
 
 /** Public user shape returned by auth endpoints (never includes the hash). */
-function toPublic(u: UserRow, streakDays = 0) {
-  return { id: u.id, username: u.username, email: u.email, full_name: u.full_name, role: u.role, must_change_password: !!u.must_change_password, streak_days: streakDays };
+async function toPublic(u: UserRow, streakDays = 0) {
+  const access = await loadAccess(u.id, u.role);
+  return {
+    id: u.id, username: u.username, email: u.email, full_name: u.full_name, role: u.role, must_change_password: !!u.must_change_password, streak_days: streakDays,
+    // Feature checkboxes and board/class/subject scope for the admin panel (Super Admin = everything, unrestricted).
+    permissions: access.permissions, scopes: access.scopes,
+  };
 }
 
 const USER_SELECT = `SELECT u.id, u.username, u.email, u.full_name, u.password_hash, r.name AS role, u.must_change_password, u.is_active
@@ -67,7 +73,7 @@ export const authService = {
       throw e;
     });
     const user = (await queryOne<UserRow>(`${USER_SELECT} WHERE u.id = ?`, [res.insertId]))!;
-    return { token: signToken(user.id), user: toPublic(user, await activityService.touch(user.id)) };
+    return { token: signToken(user.id, user.role), user: await toPublic(user, await activityService.touch(user.id)) };
   },
 
   /**
@@ -80,7 +86,7 @@ export const authService = {
     const user = await queryOne<UserRow>(`${USER_SELECT} WHERE u.username = ? AND u.deleted_at IS NULL`, [input.username]);
     const ok = await bcrypt.compare(input.password, user?.password_hash ?? DUMMY_HASH);
     if (!user || !ok || !user.is_active) throw unauthorized("Invalid username or password", "INVALID_CREDENTIALS");
-    return { token: signToken(user.id), user: toPublic(user, await activityService.touch(user.id)) };
+    return { token: signToken(user.id, user.role), user: await toPublic(user, await activityService.touch(user.id)) };
   },
 
   /** @returns the current user's public profile (also records today's activity for the streak). */

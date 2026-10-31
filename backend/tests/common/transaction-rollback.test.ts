@@ -46,7 +46,7 @@ describe("seeds & soft deletes", () => {
   it("seed scripts can be re-run safely without duplicating rows", async () => {
     await runSeeds();
     await runSeeds();
-    expect(await queryRows("SELECT id FROM roles")).toHaveLength(3);
+    expect(await queryRows("SELECT id FROM roles")).toHaveLength(4) /* Administrator, Admin, Student, Teacher */;
     expect(await queryRows("SELECT id FROM subscription_plans")).toHaveLength(3);
     expect(await queryRows("SELECT id FROM users WHERE username = 'Administrator'")).toHaveLength(1);
     expect(await queryRows("SELECT config_key FROM global_config")).toHaveLength(2);

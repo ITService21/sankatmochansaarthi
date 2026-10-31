@@ -112,11 +112,11 @@ export function StudyMaterialsHomePage() {
         <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {WHY.map(({ Icon, title, text, tint, icon, ring, num }, n) => (
             <div key={title} className={`group relative overflow-hidden rounded-2xl border-2 bg-gradient-to-br p-6 shadow-card transition-shadow hover:shadow-lg ${tint} ${ring}`}>
-              <span aria-hidden className="font-display pointer-events-none absolute -right-1 -top-3 select-none text-[88px] font-extrabold leading-none opacity-[0.08]">{n + 1}</span>
+              <span aria-hidden className="font-display pointer-events-none absolute right-5 top-1 select-none text-[72px] font-extrabold leading-none opacity-[0.08]">{n + 1}</span>
               <span className={`relative mb-5 flex h-14 w-14 items-center justify-center rounded-2xl text-white shadow-md ring-4 ring-white/70 ${icon}`}><Icon size={26} /></span>
               <h3 className="font-display relative text-xl font-extrabold uppercase leading-tight text-slate-900" style={{ fontVariant: "normal" }}>{title}</h3>
               <span aria-hidden className={`relative mt-2 block h-1 w-10 rounded-full ${icon}`} />
-              <p className={`relative mt-3 text-[15px] font-medium leading-relaxed ${num}`}>{text}</p>
+              <p className={`relative mt-3  text-[15px] font-medium leading-relaxed ${num}`}>{text}</p>
             </div>
           ))}
         </div>

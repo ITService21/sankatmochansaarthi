@@ -2,7 +2,8 @@ import { AppModal } from "../../../shared/components";
 import { Material } from "../../../shared/types";
 import { materialsApi } from "../api/study-materials.api";
 import { AccessBadge } from "./MaterialBadges";
-import { BuyButton, DownloadButton } from "./MaterialActions";
+import { BuyButton } from "./MaterialActions";
+import { AddToDownloadsButton } from "./LibraryActions";
 import { PdfPreview } from "./PdfPreview";
 import { noteHeading } from "../../../shared/utils/note-heading";
 
@@ -16,7 +17,7 @@ export function PreviewModal({ m, onClose, onChanged }: { m: Material; onClose: 
       </div>
       <PdfPreview key={m.id} title={`${noteHeading(m)} preview`} load={() => materialsApi.previewBlob(m.id)} />
       <div className="mt-4 flex flex-wrap justify-end gap-2">
-        {m.access.can_download ? <DownloadButton m={m} /> : m.access_type === "paid" && <BuyButton m={m} showPrice onPaid={() => { onChanged(); onClose(); }} />}
+        {m.access.can_download ? <AddToDownloadsButton m={m} onChanged={onChanged} /> : m.access_type === "paid" && <BuyButton m={m} showPrice onPaid={() => { onChanged(); onClose(); }} />}
       </div>
     </AppModal>
   );

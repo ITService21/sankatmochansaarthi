@@ -49,10 +49,10 @@ export function RegisterPage() {
       <OrDivider text="or sign up with email" />
       <form onSubmit={submit} className="space-y-4" noValidate>
         <AppInput label="Full name (optional)" name="full_name" autoComplete="name" placeholder="e.g. Aarav Sharma" leftIcon={<User size={17} />} value={f.full_name} onChange={(e) => set("full_name")(e.target.value)} />
-        <AppInput label="Username" name="username" autoComplete="username" placeholder="Choose a username, e.g. aarav_sharma" leftIcon={<AtSign size={17} />} value={f.username} onChange={(e) => set("username")(e.target.value)} error={touched ? errs.username : undefined} />
+        <AppInput required label="Username" name="username" autoComplete="username" placeholder="Choose a username, e.g. aarav_sharma" leftIcon={<AtSign size={17} />} value={f.username} onChange={(e) => set("username")(e.target.value)} error={touched ? errs.username : undefined} />
         <AppInput label="Email (optional)" name="email" type="email" autoComplete="email" placeholder="you@example.com" leftIcon={<Mail size={17} />} value={f.email} onChange={(e) => set("email")(e.target.value)} error={touched ? errs.email : undefined} />
         <div>
-          <PasswordInput label="Password" name="password" autoComplete="new-password" placeholder="Create a strong password" value={f.password} onChange={(e) => set("password")(e.target.value)} error={touched ? errs.password : undefined} />
+          <PasswordInput required label="Password" name="password" autoComplete="new-password" placeholder="Create a strong password" value={f.password} onChange={(e) => set("password")(e.target.value)} error={touched ? errs.password : undefined} />
           <PasswordStrength value={f.password} />
         </div>
         {m.error != null && <ErrorState error={m.error} />}

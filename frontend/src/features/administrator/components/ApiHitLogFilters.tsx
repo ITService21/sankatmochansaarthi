@@ -14,7 +14,7 @@ export function ApiHitLogFilters({ values, onChange, onReset }: { values: LogFil
       <AppSelect label="Result" placeholder="All" value={v("success")} onChange={(x) => onChange("success", x)} options={[{ value: "true", label: "Success" }, { value: "false", label: "Failure" }]} />
       <AppSelect label="Method" placeholder="All" value={v("method")} onChange={(x) => onChange("method", x)} options={["GET", "POST", "PUT", "PATCH", "DELETE"].map((m) => ({ value: m, label: m }))} />
       <AppInput label="Status code" inputMode="numeric" value={v("status_code")} onChange={(e) => onChange("status_code", e.target.value)} />
-      <AppSelect label="Role" placeholder="All" value={v("role")} onChange={(x) => onChange("role", x)} options={["Administrator", "Student", "Teacher"].map((r) => ({ value: r, label: r }))} />
+      <AppSelect label="Role" placeholder="All" value={v("role")} onChange={(x) => onChange("role", x)} options={["Administrator", "Admin", "Student", "Teacher"].map((r) => ({ value: r, label: r }))} />
       <AppInput label="Username" value={v("username")} onChange={(e) => onChange("username", e.target.value)} />
       <AppInput label="API path contains" value={v("path_contains")} onChange={(e) => onChange("path_contains", e.target.value)} />
       <AppInput label="Request ID" value={v("request_id")} onChange={(e) => onChange("request_id", e.target.value)} />

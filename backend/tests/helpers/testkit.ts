@@ -21,7 +21,7 @@ export let storage: MemoryMaterialStorage;
 export let fakeProvider: FakePaymentProvider;
 
 const TABLES = [
-  "user_identities", "user_downloads", "user_activity_days", "callback_requests", "payment_webhook_events", "user_subscriptions", "material_entitlements", "payments", "storage_cleanup_queue", "study_materials",
+  "upload_drafts", "admin_permissions", "admin_scopes", "user_identities", "user_downloads", "user_activity_days", "callback_requests", "payment_webhook_events", "user_subscriptions", "material_entitlements", "payments", "storage_cleanup_queue", "study_materials",
   "academic_topics", "academic_chapters", "academic_boards", "academic_classes", "academic_subjects", "languages",
   "audit_events", "api_hit_logs", "global_config", "users", "subscription_plans", "material_types", "roles",
 ];

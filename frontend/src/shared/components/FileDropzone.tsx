@@ -1,15 +1,16 @@
 import { useRef, useState } from "react";
+import { FieldLabel } from "./FieldLabel";
 import { formatFileSize } from "../utils/format-file-size";
 
 /** Shared drag-and-drop file picker. Validates extension client-side (server validates for real). */
-export function FileDropzone({ file, onFile, accept = "application/pdf", label = "PDF file", error }: {
-  file: File | null; onFile: (f: File | null) => void; accept?: string; label?: string; error?: string;
+export function FileDropzone({ file, onFile, accept = "application/pdf", label = "PDF file", error, required }: {
+  file: File | null; onFile: (f: File | null) => void; accept?: string; label?: string; error?: string; required?: boolean;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [over, setOver] = useState(false);
   return (
     <div>
-      <span className="mb-1 block text-sm font-medium text-slate-700">{label}</span>
+      <FieldLabel required={required}>{label}</FieldLabel>
       <div
         onClick={() => input.current?.click()}
         onDragOver={(e) => { e.preventDefault(); setOver(true); }}

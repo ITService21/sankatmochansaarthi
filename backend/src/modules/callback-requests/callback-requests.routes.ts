@@ -1,16 +1,16 @@
 import { Router } from "express";
 import { z } from "zod";
 import { authenticate } from "../../common/auth/authenticate";
-import { requireAdministrator } from "../../common/auth/require-role";
+import { requirePermission } from "../../common/auth/require-role";
 import { asyncHandler } from "../../common/http/async-handler";
 import { sendData, sendList } from "../../common/http/responses";
 import { parseQuery } from "../../common/validation/query";
 import { parseBody, parseIdParam } from "../../common/validation/validate-body";
 import { callbackListShape, callbackRequestsService as svc } from "./callback-requests.service";
 
-/** Mounted at /api/v1/admin/callback-requests — Administrator only. */
+/** Mounted at /api/v1/admin/callback-requests — Super Admin or an Admin granted "callbacks.manage". */
 export const callbackRequestsAdminRouter = Router();
-callbackRequestsAdminRouter.use(authenticate(), requireAdministrator);
+callbackRequestsAdminRouter.use(authenticate(), requirePermission("callbacks.manage"));
 
 /** GET /?status=&q=&page=&page_size= -> `{ data, pagination }` */
 callbackRequestsAdminRouter.get("/", asyncHandler(async (req, res) => {

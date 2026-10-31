@@ -8,6 +8,10 @@ declare global {
       username: string;
       role: string;
       mustChangePassword: boolean;
+      /** Feature permissions (Administrator = all). */
+      permissions: string[];
+      /** Board/class/subject restriction for an Admin (empty arrays = unrestricted). */
+      scopes: { board_ids: number[]; class_ids: number[]; subject_ids: number[] };
     }
     interface Request {
       user?: AuthUser;

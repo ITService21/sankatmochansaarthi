@@ -33,8 +33,8 @@ export function CallbackForm({ defaultMessage = "" }: { defaultMessage?: string 
   );
   return (
     <form onSubmit={submit} noValidate className="grid gap-4 sm:grid-cols-2" aria-label="Request a callback">
-      <AppInput label="Your name" name="name" autoComplete="name" value={f.name} onChange={(e) => set("name")(e.target.value)} error={touched ? errs.name : undefined} />
-      <AppInput label="Phone number" name="phone" type="tel" autoComplete="tel" inputMode="tel" value={f.phone} onChange={(e) => set("phone")(e.target.value)} error={touched ? errs.phone : undefined} />
+      <AppInput required label="Your name" name="name" autoComplete="name" value={f.name} onChange={(e) => set("name")(e.target.value)} error={touched ? errs.name : undefined} />
+      <AppInput required label="Phone number" name="phone" type="tel" autoComplete="tel" inputMode="tel" value={f.phone} onChange={(e) => set("phone")(e.target.value)} error={touched ? errs.phone : undefined} />
       <AppSelect label="Class" placeholder="Select class" value={f.class_label} onChange={set("class_label")}
         options={[...(courses.data ?? []).map((c) => ({ value: classLabel(c), label: classLabel(c) })), { value: "Other", label: "Other" }]} />
       <AppInput label="City" name="city" autoComplete="address-level2" value={city} onChange={(e) => setCity(e.target.value)} />

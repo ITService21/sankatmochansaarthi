@@ -68,7 +68,7 @@ function PageCanvas({ doc, pageNumber, width, rotation, watermark }: { doc: pdfj
   }, [visible, doc, pageNumber, width, rotation, watermark]);
 
   return (
-    <div ref={holder} style={{ width, height: width * ratio }} className="relative mx-auto mb-3 overflow-hidden bg-white shadow-md ring-1 ring-slate-300">
+    <div ref={holder} data-page={pageNumber} style={{ width, height: width * ratio }} className="relative mx-auto mb-3 overflow-hidden bg-white shadow-md ring-1 ring-slate-300">
       <canvas ref={canvas} style={{ width: "100%", height: "100%" }} aria-label={`Page ${pageNumber}`} />
     </div>
   );
@@ -98,6 +98,7 @@ export function SecureViewer({ load, title, protect = true, className = "" }: { 
   const [rotation, setRotation] = useState(0);
   const [attempt, setAttempt] = useState(0);
   const [fullscreen, setFullscreen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const { obscured } = useContentProtection(root, protect);
   const watermark = WATERMARK_ENABLED ? `${user?.username ?? "guest"} • ID ${user?.id ?? "-"} • Sankatmochan Saarthi • ${new Date().toLocaleDateString()}` : null;
 
@@ -124,6 +125,21 @@ export function SecureViewer({ load, title, protect = true, className = "" }: { 
     return () => ro.disconnect();
   }, [measure]);
 
+  // "Page X of N": the page that is most visible on screen (works for page scroll and for the full-screen scroller).
+  useEffect(() => {
+    if (!doc || !area.current) return;
+    setCurrentPage(1);
+    const ratios = new Map<number, number>();
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) ratios.set(Number((e.target as HTMLElement).dataset.page), e.intersectionRatio);
+      let best = 0, bestRatio = -1;
+      for (const [page, r] of ratios) if (r > bestRatio || (r === bestRatio && page < best)) { best = page; bestRatio = r; }
+      if (best && bestRatio > 0) setCurrentPage(best);
+    }, { threshold: [0, 0.1, 0.25, 0.5, 0.75, 1] });
+    area.current.querySelectorAll("[data-page]").forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  }, [doc, zoom, rotation, fitWidth]);
+
   useEffect(() => {
     const onChange = () => setFullscreen(document.fullscreenElement === root.current);
     document.addEventListener("fullscreenchange", onChange);
@@ -134,7 +150,7 @@ export function SecureViewer({ load, title, protect = true, className = "" }: { 
 
   return (
     <div ref={root} role="document" aria-label={title} className={`secure-viewer relative select-none rounded-xl bg-slate-200 ${fullscreen ? "flex h-screen flex-col overflow-hidden rounded-none" : ""} ${className}`} style={{ WebkitUserSelect: "none" }}>
-      <div className="sticky top-0 z-20 flex flex-wrap items-center gap-1 rounded-t-xl bg-slate-900 px-3 py-2" role="toolbar" aria-label="Viewer controls">
+      <div className="relative z-20 flex flex-wrap items-center gap-1 rounded-t-xl bg-slate-900 px-3 py-2" role="toolbar" aria-label="Viewer controls">
         <button className={toolBtn} aria-label="Zoom out" title="Zoom out" disabled={zoom <= MIN_ZOOM} onClick={() => zoomBy(-ZOOM_STEP)}><ZoomOut size={18} /></button>
         <span className="w-14 text-center text-sm font-semibold tabular-nums text-white" aria-live="polite">{Math.round(zoom * 100)}%</span>
         <button className={toolBtn} aria-label="Zoom in" title="Zoom in" disabled={zoom >= MAX_ZOOM} onClick={() => zoomBy(ZOOM_STEP)}><ZoomIn size={18} /></button>
@@ -142,11 +158,12 @@ export function SecureViewer({ load, title, protect = true, className = "" }: { 
         <span className="mx-1 h-5 w-px bg-white/25" aria-hidden />
         <button className={toolBtn} aria-label="Rotate left" title="Rotate left" onClick={() => setRotation((r) => (r + 270) % 360)}><RotateCcw size={18} /></button>
         <button className={toolBtn} aria-label="Rotate right" title="Rotate right" onClick={() => setRotation((r) => (r + 90) % 360)}><RotateCw size={18} /></button>
-        <span className="ml-auto mr-2 hidden text-xs text-slate-300 sm:inline">{doc ? `${doc.numPages} page${doc.numPages === 1 ? "" : "s"}` : ""}</span>
+        <span className="ml-auto mr-2 text-xs font-semibold tabular-nums text-slate-200" aria-live="polite" aria-label={doc ? `Page ${currentPage} of ${doc.numPages}` : undefined}>{doc ? `Page ${Math.min(currentPage, doc.numPages)} of ${doc.numPages}` : ""}</span>
         <button className={toolBtn} aria-label={fullscreen ? "Exit full screen" : "Full screen"} title={fullscreen ? "Exit full screen" : "Full screen"} onClick={toggleFullscreen}>{fullscreen ? <Minimize size={18} /> : <Maximize size={18} />}</button>
       </div>
 
-      <div ref={area} className={`overflow-auto p-2 ${fullscreen ? "flex-1" : ""}`}>
+      {/* The pages scroll INSIDE the viewer, under a fixed toolbar — a sticky toolbar slid out of the frame (and let pages show above it) when the viewer sat in a scrolling, padded dialog. */}
+      <div ref={area} className={`overflow-auto overscroll-contain rounded-b-xl p-2 ${fullscreen ? "flex-1" : "max-h-[78vh]"}`}>
         {error ? (
           <div role="alert" className="flex flex-col items-center gap-3 py-16 text-center">
             <p className="max-w-sm text-sm text-slate-700">{error}</p>

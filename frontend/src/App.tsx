@@ -21,11 +21,18 @@ import { TestSeriesPage } from "./features/site/pages/TestSeriesPage";
 import { AdminMaterialsPage } from "./features/study-materials/pages/AdminMaterialsPage";
 import { SubscriptionsPage } from "./features/subscriptions/pages/SubscriptionsPage";
 import { PermissionGuard } from "./shared/auth/PermissionGuard";
-import { AdminShell } from "./shared/components";
+import { AdminShell, useAllowedNav } from "./shared/components";
 
 const Forbidden = () => (
   <div className="py-16 text-center"><h1 className="text-xl font-semibold">Not allowed</h1><p className="mt-2 text-sm text-slate-600">You don't have access to that page.</p><Link className="mt-4 inline-block text-blue-700 underline" to="/">Back to home</Link></div>
 );
+
+/** /admin lands on the first page this staff member may use (an Admin with no checkboxes gets an explanation instead). */
+function AdminHome() {
+  const first = useAllowedNav()[0];
+  if (first?.to) return <Navigate to={first.to} replace />;
+  return <div className="py-16 text-center"><h1 className="text-xl font-semibold">No access granted yet</h1><p className="mt-2 text-sm text-slate-600">Ask the Super Admin to switch on the features you should manage.</p></div>;
+}
 
 /**
  * Route table. Three layouts: PublicShell (landing, test series), LearnerShell (study materials, courses, workspace, downloads…),
@@ -55,14 +62,15 @@ export default function App() {
         <Route path="forbidden" element={<Forbidden />} />
       </Route>
 
-      <Route path="admin" element={<PermissionGuard roles={[]}><AdminShell /></PermissionGuard>}>
-        <Route index element={<Navigate to="materials" replace />} />
-        <Route path="materials" element={<AdminMaterialsPage />} />
-        <Route path="academic" element={<AcademicConfigPage />} />
-        <Route path="users" element={<UsersPage />} />
-        <Route path="callback-requests" element={<CallbackRequestsPage />} />
-        <Route path="api-hit-logs" element={<ApiHitLogsPage />} />
-        <Route path="settings" element={<SettingsPage />} />
+      {/* Admin panel: Super Admin (everything) and Admin (only what was granted). Each page repeats the server's permission rule. */}
+      <Route path="admin" element={<PermissionGuard staff><AdminShell /></PermissionGuard>}>
+        <Route index element={<AdminHome />} />
+        <Route path="materials" element={<PermissionGuard permission={["materials.view", "materials.create"]}><AdminMaterialsPage /></PermissionGuard>} />
+        <Route path="academic" element={<PermissionGuard permission="academic.manage"><AcademicConfigPage /></PermissionGuard>} />
+        <Route path="users" element={<PermissionGuard permission="users.manage"><UsersPage /></PermissionGuard>} />
+        <Route path="callback-requests" element={<PermissionGuard permission="callbacks.manage"><CallbackRequestsPage /></PermissionGuard>} />
+        <Route path="api-hit-logs" element={<PermissionGuard superOnly><ApiHitLogsPage /></PermissionGuard>} />
+        <Route path="settings" element={<PermissionGuard permission={["settings.manage", "site_contact.manage"]}><SettingsPage /></PermissionGuard>} />
       </Route>
 
       <Route path="plans" element={<Navigate to="/subscriptions" replace />} />

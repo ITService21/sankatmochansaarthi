@@ -1,7 +1,7 @@
 import { ArrowLeft, BookOpen, Lock, ShieldCheck, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { AppButton, AppPagination, ConfirmDialog, EmptyState, ErrorState, LoadingState, SubjectIcon } from "../../../shared/components";
+import { AppButton, AppPagination, ConfirmDialog, EmptyState, ErrorState, LoadingState, SubjectIcon, useToast } from "../../../shared/components";
 import { useAsync } from "../../../shared/hooks/useAsync";
 import { useMutation } from "../../../shared/hooks/useMutation";
 import { Material } from "../../../shared/types";
@@ -19,7 +19,12 @@ export function DownloadsPage() {
   const { data, loading, error, reload } = useAsync(() => materialsApi.list({ downloaded: true, page, page_size: 10, sort_by: "title", sort_order: "asc" }), [page]);
   const [reading, setReading] = useState<Material | null>(null);
   const [removing, setRemoving] = useState<Material | null>(null);
-  const remove = useMutation(async () => { await materialsApi.removeDownload(removing!.id); setRemoving(null); reload(); });
+  const toast = useToast();
+  const remove = useMutation(async () => {
+    const id = toast.loading("Removing from My Downloads…");
+    try { await materialsApi.removeDownload(removing!.id); toast.success("Removed from My Downloads.", id); setRemoving(null); reload(); }
+    catch (e) { toast.error(e, id); throw e; }
+  });
 
   if (reading) {
     return (

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { authenticate } from "../../common/auth/authenticate";
-import { requireAdministrator } from "../../common/auth/require-role";
+import { hasPermission, requirePermission } from "../../common/auth/require-role";
+import { ROLES } from "../../config/roles";
 import { asyncHandler } from "../../common/http/async-handler";
 import { sendData, sendList } from "../../common/http/responses";
 import { parseQuery } from "../../common/validation/query";
@@ -20,19 +21,22 @@ import { academicService, listQueryShape } from "./academic.service";
  */
 export const academicRouter = Router();
 
+/** Disabled values are visible only to those who may manage the setup (Super Admin / Admin with "academic.manage"). */
+const viewRole = (u: NonNullable<Express.Request["user"]>) => (hasPermission(u, "academic.manage") ? ROLES.ADMINISTRATOR : u.role);
+
 for (const def of Object.values(TAXONOMY)) {
   const base = `/${def.path}`;
   academicRouter.get(base, authenticate(), asyncHandler(async (req, res) => {
     const q = parseQuery(listQueryShape(def), req);
-    const { items, pagination } = await academicService.list(def, q, req.user!.role);
+    const { items, pagination } = await academicService.list(def, q, viewRole(req.user!));
     sendList(res, items, pagination);
   }));
   academicRouter.get(`${base}/:id`, authenticate(), asyncHandler(async (req, res) =>
-    sendData(res, await academicService.get(def, parseIdParam(req.params.id), req.user!.role))));
-  academicRouter.post(base, authenticate(), requireAdministrator, asyncHandler(async (req, res) =>
+    sendData(res, await academicService.get(def, parseIdParam(req.params.id), viewRole(req.user!)))));
+  academicRouter.post(base, authenticate(), requirePermission("academic.manage"), asyncHandler(async (req, res) =>
     sendData(res, await academicService.create(def, parseBody(bodySchemaFor(def, false), req.body), req.user!.id), 201)));
-  academicRouter.patch(`${base}/:id`, authenticate(), requireAdministrator, asyncHandler(async (req, res) =>
+  academicRouter.patch(`${base}/:id`, authenticate(), requirePermission("academic.manage"), asyncHandler(async (req, res) =>
     sendData(res, await academicService.update(def, parseIdParam(req.params.id), parseBody(bodySchemaFor(def, true), req.body), req.user!.id))));
-  academicRouter.delete(`${base}/:id`, authenticate(), requireAdministrator, asyncHandler(async (req, res) =>
+  academicRouter.delete(`${base}/:id`, authenticate(), requirePermission("academic.manage"), asyncHandler(async (req, res) =>
     sendData(res, await academicService.remove(def, parseIdParam(req.params.id), req.user!.id))));
 }

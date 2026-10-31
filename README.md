@@ -53,6 +53,27 @@ In production set `OAUTH_REDIRECT_BASE` / `FRONTEND_URL` to your public site URL
 `npm run admin:reset` (in `backend/`) resets the `Administrator` password to `ADMIN_BOOTSTRAP_PASSWORD` from `.env`
 (add `-- --keep-password` to skip the forced change at next login). Use it if the password is lost.
 
+## Super Admin, Admins and what they can do
+
+- The **Administrator** account is the **Super Admin**: every feature, no restrictions, the only one who can create Admin accounts
+  and read the API hit logs.
+- Super Admin creates **Admin** accounts in *Users → Add user → Admin*, ticking a checkbox for each feature
+  (view/upload/edit/publish/delete notes, academic setup, learner accounts, callback requests, contact details, settings).
+  **Users → Access** changes those boxes later; changes apply on the Admin's very next request.
+- An Admin can also be limited to **boards, classes and subjects** (e.g. "CBSE only", "Class 12 only", "ICSE + Class 10").
+  Nothing ticked in a group = no restriction in that group; ticked groups combine (board AND class AND subject).
+  Scope applies to notes: the Admin's list, preview, upload, edit, publish and delete.
+- Super Admin and Admin sessions last **7 days** (`ADMIN_JWT_EXPIRES_IN`); learners keep `JWT_EXPIRES_IN`.
+- Not grantable: managing Admin accounts and the API hit logs.
+
+## Adding notes (PDF, JPG, PNG, DOC, DOCX)
+
+*Manage Notes → Add notes*: choose up to 10 files and the shared details; each file is converted to PDF on the server, you
+**preview every converted PDF**, then **Accept** (saves the note) or **Discard**. Converted-but-unreviewed files are stored as
+drafts per user (kept `DRAFT_RETENTION_DAYS`), and the form is remembered in the browser, so going back or reloading loses nothing.
+Word files use LibreOffice when it is installed (`sudo apt install libreoffice-writer`); without it a basic text-only conversion
+is used (formatting, pictures and non-Latin scripts such as Hindi are not kept) and the review step says so. Old `.doc` files need LibreOffice.
+
 ## Tests
 
 ```bash

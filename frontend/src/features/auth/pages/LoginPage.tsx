@@ -30,9 +30,9 @@ export function LoginPage() {
       <SocialButtons />
       <OrDivider text="or log in with your username" />
       <form onSubmit={submit} className="space-y-4" noValidate>
-        <AppInput label="Username" name="username" autoComplete="username" autoFocus placeholder="Enter your username" leftIcon={<User size={17} />}
+        <AppInput required label="Username" name="username" autoComplete="username" autoFocus placeholder="Enter your username" leftIcon={<User size={17} />}
           value={username} onChange={(e) => setUsername(e.target.value)} error={touched ? required(username, "Username") : undefined} />
-        <PasswordInput label="Password" name="password" autoComplete="current-password" placeholder="Enter your password"
+        <PasswordInput required label="Password" name="password" autoComplete="current-password" placeholder="Enter your password"
           value={password} onChange={(e) => setPassword(e.target.value)} error={touched ? required(password, "Password") : undefined} />
         {m.error != null && <ErrorState error={m.error} />}
         <AppButton type="submit" loading={m.loading} className="w-full !bg-blue-700 py-3 text-base hover:!bg-blue-800"><LogIn size={18} />Log in</AppButton>

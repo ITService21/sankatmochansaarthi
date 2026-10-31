@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { Readable } from "node:stream";
+import { z } from "zod";
 import { env } from "../../config/env";
 import { ROLES } from "../../config/roles";
 import { recordAudit } from "../../common/audit/audit.service";
@@ -21,10 +22,19 @@ import { studyMaterialsRepository as repo } from "./study-materials.repository";
 import { toMaterialDto } from "./study-materials.mapper";
 import { assertPricing, createMaterialSchema, updateMaterialSchema } from "./study-materials.schemas";
 import { purgeQueuedObject } from "./storage-cleanup";
-import { MaterialListFilter, MaterialRow } from "./study-materials.types";
+import { MaterialListFilter, MaterialRow, ValidatedPdf } from "./study-materials.types";
+import { assertInScope, inScope, scopeFilter } from "../../common/auth/scope";
 
-type Actor = { id: number; role: string };
-const isAdmin = (a: Actor) => a.role === ROLES.ADMINISTRATOR;
+type Actor = { id: number; role: string; permissions?: string[]; scopes?: { board_ids: number[]; class_ids: number[]; subject_ids: number[] } };
+const isSuper = (a: Actor) => a.role === ROLES.ADMINISTRATOR;
+/** Staff see drafts/unpublished notes: the Super Admin, and an Admin granted "materials.view" (limited to their scope). */
+const isAdmin = (a: Actor) => isSuper(a) || (a.role === ROLES.ADMIN && !!a.permissions?.includes("materials.view"));
+/** Actor as the access policy should see them: staff viewers act as Administrator, an Admin without view rights as a plain learner. */
+const accessActor = (a: Actor): Actor => (isSuper(a) ? a : isAdmin(a) ? { ...a, role: ROLES.ADMINISTRATOR } : a.role === ROLES.ADMIN ? { ...a, role: ROLES.STUDENT } : a);
+/** Admin accounts are restricted to their board/class/subject scope; nobody else is. */
+const principal = (a: Actor) => ({ permissions: [], scopes: { board_ids: [], class_ids: [], subject_ids: [] }, username: "", mustChangePassword: false, ...a });
+const assertScope = (a: Actor, d: { board_id: number; class_id: number; subject_id: number }) => assertInScope(principal(a), d);
+const visibleTo = (a: Actor, d: { board_id: number; class_id: number; subject_id: number }) => !isAdmin(a) || inScope(principal(a), d);
 
 /** Builds the per-user capability flags for one row. */
 const flags = (ctx: AccessContext, m: MaterialRow, downloaded: Set<number>) => ({
@@ -85,9 +95,10 @@ export const studyMaterialsService = {
     // `purchased=true` restricts to the caller's own active entitlements (server-derived, not client-supplied ids).
     if (f.purchased) f.purchased_by = actor.id;
     if (f.downloaded) f.downloaded_by = actor.id;
+    if (isAdmin(actor) && !isSuper(actor)) f.scope = scopeFilter(principal(actor));
     const { rows, total } = await repo.list(f);
     const ids = rows.map((r) => r.id);
-    const [ctx, downloaded] = await Promise.all([entitlementsService.getAccessContext(actor, ids), downloadsRepository.downloadedIds(actor.id, ids)]);
+    const [ctx, downloaded] = await Promise.all([entitlementsService.getAccessContext(accessActor(actor), ids), downloadsRepository.downloadedIds(actor.id, ids)]);
     return { items: rows.map((r) => toMaterialDto(r, flags(ctx, r, downloaded), isAdmin(actor))), pagination: buildPagination(f.page, f.page_size, total) };
   },
 
@@ -97,8 +108,8 @@ export const studyMaterialsService = {
    */
   async get(id: number, actor: Actor) {
     const m = await repo.findById(id);
-    if (!m || (!isAdmin(actor) && m.status !== "published")) throw notFound("Study material not found");
-    const [ctx, downloaded] = await Promise.all([entitlementsService.getAccessContext(actor, [id]), downloadsRepository.downloadedIds(actor.id, [id])]);
+    if (!m || (!isAdmin(actor) && m.status !== "published") || !visibleTo(actor, m)) throw notFound("Study material not found");
+    const [ctx, downloaded] = await Promise.all([entitlementsService.getAccessContext(accessActor(actor), [id]), downloadsRepository.downloadedIds(actor.id, [id])]);
     return toMaterialDto(m, flags(ctx, m, downloaded), isAdmin(actor));
   },
 
@@ -115,6 +126,16 @@ export const studyMaterialsService = {
   async create(fields: unknown, file: UploadedFile | undefined, actor: Actor) {
     const body = createMaterialSchema.parse(fields);
     const pdf = await validatePdfUpload(file, maxBytes());
+    return this.createFromPdf(body, pdf, actor);
+  },
+
+  /**
+   * Creates the draft material from already-validated metadata and PDF bytes (used by direct upload and by accepting a
+   * converted upload draft). `inTransaction` runs inside the same DB transaction (e.g. to mark the draft accepted), so
+   * "material created" and "draft accepted" succeed or fail together.
+   */
+  async createFromPdf(body: z.infer<typeof createMaterialSchema>, pdf: ValidatedPdf, actor: Actor, inTransaction?: (conn: PoolConnection, materialId: number) => Promise<void>) {
+    assertScope(actor, body);
     const pricingError = assertPricing(body.access_type, body.price_minor_units, body.currency);
     if (pricingError) throw badRequest(pricingError);
     const languageId = body.language_id ?? (await defaultLanguageId());
@@ -143,6 +164,7 @@ export const studyMaterialsService = {
         uploadedKey = key;
         await repo.update(conn, newId, { original_s3_key: key });
         await recordAudit(conn, actor.id, "material.create", "study_materials", newId, { title });
+        if (inTransaction) await inTransaction(conn, newId);
         return newId;
       });
     } catch (err) {
@@ -167,13 +189,14 @@ export const studyMaterialsService = {
     await withTransaction(async (conn) => {
       const cur = await repo.findById(id, conn, true);
       if (!cur) throw notFound("Study material not found");
+      assertScope(actor, cur);
       const merged = {
         board_id: body.board_id ?? cur.board_id, class_id: body.class_id ?? cur.class_id, subject_id: body.subject_id ?? cur.subject_id,
         chapter_id: body.chapter_id ?? cur.chapter_id, topic_id: body.topic_id === undefined ? cur.topic_id : body.topic_id,
-        language_id: body.language_id ?? cur.language_id,
+        language_id: body.language_id ?? cur.language_id, stream: (body.stream ?? cur.stream) as "science" | "commerce" | "general",
       };
-      const taxonomyTouched = ["board_id", "class_id", "subject_id", "chapter_id", "topic_id", "language_id"].some((k) => k in body);
-      if (taxonomyTouched) await assertTaxonomyConsistent(merged, conn);
+      const taxonomyTouched = ["board_id", "class_id", "subject_id", "chapter_id", "topic_id", "language_id", "stream"].some((k) => k in body);
+      if (taxonomyTouched) { assertScope(actor, merged); await assertTaxonomyConsistent(merged, conn); }
       const access = body.access_type ?? cur.access_type;
       const price = body.price_minor_units === undefined ? cur.price_minor_units : body.price_minor_units;
       const currency = body.currency === undefined ? cur.currency : body.currency;
@@ -207,6 +230,7 @@ export const studyMaterialsService = {
       await withTransaction(async (conn, onCommit) => {
         const cur = await repo.findById(id, conn, true);
         if (!cur) throw notFound("Study material not found");
+        assertScope(actor, cur);
         const key = `study-materials/${id}/original/${randomUUID()}.pdf`;
         await getStorage().put(key, pdf.bytes, "application/pdf");
         uploadedKey = key;
@@ -239,6 +263,7 @@ export const studyMaterialsService = {
     await withTransaction(async (conn) => {
       const m = await repo.findById(id, conn, true);
       if (!m) throw notFound("Study material not found");
+      assertScope(actor, m);
       if (m.status === "published") return;
       if (m.status === "archived") throw conflict("Archived materials cannot be published", "INVALID_STATE");
       if (m.preview_status !== "ready") throw new AppError(422, "NOT_PUBLISHABLE", "Preview must be generated before publishing; retry preview generation");
@@ -259,6 +284,7 @@ export const studyMaterialsService = {
     await withTransaction(async (conn) => {
       const m = await repo.findById(id, conn, true);
       if (!m) throw notFound("Study material not found");
+      assertScope(actor, m);
       if (m.status !== "published") throw conflict("Only published materials can be unpublished", "INVALID_STATE");
       await repo.update(conn, id, { status: "unpublished", updated_by: actor.id });
       await recordAudit(conn, actor.id, "material.unpublish", "study_materials", id);
@@ -275,6 +301,7 @@ export const studyMaterialsService = {
     return withTransaction(async (conn) => {
       const m = await repo.findById(id, conn, true);
       if (!m) throw notFound("Study material not found");
+      assertScope(actor, m);
       await repo.update(conn, id, { deleted_at: new Date(), status: "archived", updated_by: actor.id });
       await recordAudit(conn, actor.id, "material.delete", "study_materials", id);
       return { id, deleted: true };
@@ -287,7 +314,9 @@ export const studyMaterialsService = {
    * @returns updated DTO
    */
   async regeneratePreview(id: number, actor: Actor) {
-    if (!(await repo.findById(id))) throw notFound("Study material not found");
+    const cur = await repo.findById(id);
+    if (!cur) throw notFound("Study material not found");
+    assertScope(actor, cur);
     if ((await previewService.generate(id)) === "failed") throw new AppError(502, "PREVIEW_GENERATION_FAILED", "Preview generation failed; please retry");
     return this.get(id, actor);
   },
@@ -300,8 +329,8 @@ export const studyMaterialsService = {
    */
   async openPreview(id: number, actor: Actor): Promise<{ stream: Readable; filename: string }> {
     const m = await repo.findById(id);
-    const ctx = await entitlementsService.getAccessContext(actor, [id]);
-    if (!m || !MaterialAccessPolicy.canPreview(ctx, m)) throw notFound("Study material not found");
+    const ctx = await entitlementsService.getAccessContext(accessActor(actor), [id]);
+    if (!m || !visibleTo(actor, m) || !MaterialAccessPolicy.canPreview(ctx, m)) throw notFound("Study material not found");
     if (m.preview_status !== "ready" || !m.preview_s3_key) throw conflict("Preview is not available", "PREVIEW_UNAVAILABLE");
     return { stream: await openOrThrow(m.preview_s3_key), filename: `preview-${m.original_filename}` };
   },
@@ -314,8 +343,8 @@ export const studyMaterialsService = {
    */
   async authorizeDownload(id: number, actor: Actor): Promise<MaterialRow> {
     const m = await repo.findById(id);
-    const ctx = await entitlementsService.getAccessContext(actor, [id]);
-    if (!m || (!isAdmin(actor) && m.status !== "published")) throw notFound("Study material not found");
+    const ctx = await entitlementsService.getAccessContext(accessActor(actor), [id]);
+    if (!m || (!isAdmin(actor) && m.status !== "published") || !visibleTo(actor, m)) throw notFound("Study material not found");
     if (!MaterialAccessPolicy.canDownload(ctx, m)) throw forbidden("Purchase or an active subscription is required to access this material", "PURCHASE_REQUIRED");
     return m;
   },
