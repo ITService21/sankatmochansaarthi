@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { SelectOption } from "../../../shared/components";
 import { useAsync } from "../../../shared/hooks/useAsync";
 import { academicApi, TaxonomyResource } from "../api/academic.api";
@@ -11,5 +12,8 @@ export function useTaxonomyOptions(resource: TaxonomyResource, query: Record<str
     async () => (enabled ? (await academicApi.options(resource, query)).map((i): SelectOption => ({ value: i.id, label: i.name, ...(i.coming_soon ? { disabled: true, hint: "Coming soon" } : {}) })) : []),
     [resource, enabled, JSON.stringify(query)],
   );
-  return { options: data ?? [], loading };
+  // Items created on the spot (e.g. a new topic typed into a dropdown) show up at once without refetching.
+  const [added, setAdded] = useState<SelectOption[]>([]);
+  const options = [...(data ?? []), ...added.filter((a) => !(data ?? []).some((o) => o.value === a.value))];
+  return { options, loading, addOption: (o: SelectOption) => setAdded((cur) => [...cur, o]) };
 }

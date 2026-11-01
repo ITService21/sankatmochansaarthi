@@ -1,7 +1,7 @@
-import { Check, ChevronDown, Search, X } from "lucide-react";
+import { Check, ChevronDown, Plus, Search, X } from "lucide-react";
 import { KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { FieldLabel } from "./FieldLabel";
-import { SelectOption } from "./AppSelect";
+import type { SelectOption } from "./AppSelect";
 
 const MAX_RENDERED = 200;
 /** Fired when any combobox opens, so every other one closes (only one dropdown is ever open). */
@@ -23,6 +23,15 @@ interface Props {
   required?: boolean;
   /** Shown in the open list when there is nothing to choose from (e.g. "No chapters for this combination yet"). */
   emptyMessage?: string;
+  /**
+   * When given, typing a name that is not in the list offers a "Create “name”" row. It should save the new item and
+   * resolve to the new item's value (which is then selected); reject with an Error to show a message under the list.
+   */
+  onCreate?: (name: string) => Promise<string>;
+  /** Small helper text under the field (hidden while an error is shown). */
+  hint?: string;
+  /** Noun for the create row, e.g. "topic". */
+  createNoun?: string;
 }
 
 /**
@@ -30,10 +39,12 @@ interface Props {
  * Only the first 200 matches are rendered, so it stays fast with thousands of records — keep typing to narrow down.
  * Same props as AppSelect, so it is a drop-in replacement.
  */
-export function AppCombobox({ label, options, value, onChange, placeholder, searchPlaceholder = "Type to search…", disabled, error, className = "", id, required, emptyMessage }: Props) {
+export function AppCombobox({ label, options, value, onChange, placeholder, searchPlaceholder = "Type to search…", disabled, error, className = "", id, required, emptyMessage, onCreate, createNoun = "item", hint }: Props) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState("");
   const root = useRef<HTMLDivElement>(null);
   const search = useRef<HTMLInputElement>(null);
   const list = useRef<HTMLUListElement>(null);
@@ -47,9 +58,13 @@ export function AppCombobox({ label, options, value, onChange, placeholder, sear
   }, [options, query]);
   const shown = filtered.slice(0, MAX_RENDERED);
   // The first row clears the selection (only when a placeholder/"All" label is provided and the user isn't searching).
-  const items: Array<{ value: string; label: string; clear?: boolean; disabled?: boolean; hint?: string }> = [
+  const typed = query.trim();
+  // Offer "Create" only when something was typed and no existing option has exactly that name.
+  const canCreate = !!onCreate && typed.length > 0 && !options.some((o) => o.label.trim().toLowerCase() === typed.toLowerCase());
+  const items: Array<{ value: string; label: string; clear?: boolean; disabled?: boolean; hint?: string; create?: boolean }> = [
     ...(placeholder !== undefined && !query ? [{ value: "", label: placeholder, clear: true }] : []),
     ...shown.map((o) => ({ value: String(o.value), label: o.label, disabled: o.disabled, hint: o.hint })),
+    ...(canCreate ? [{ value: "", label: `Create ${createNoun} “${typed}”`, create: true }] : []),
   ];
 
   useEffect(() => {
@@ -66,7 +81,7 @@ export function AppCombobox({ label, options, value, onChange, placeholder, sear
     window.addEventListener(OPENED_EVENT, h);
     return () => window.removeEventListener(OPENED_EVENT, h);
   }, [open, uid]);
-  useEffect(() => { if (open) { setQuery(""); setTimeout(() => search.current?.focus(), 0); } }, [open]);
+  useEffect(() => { if (open) { setQuery(""); setCreateError(""); setTimeout(() => search.current?.focus(), 0); } }, [open]);
   useEffect(() => { setActive(Math.max(0, items.findIndex((i) => !i.disabled))); }, [query, open]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { list.current?.children[active]?.scrollIntoView({ block: "nearest" }); }, [active]);
 
@@ -76,10 +91,19 @@ export function AppCombobox({ label, options, value, onChange, placeholder, sear
     return from;
   };
   const choose = (v: string) => { onChange(v); setOpen(false); };
+  /** Saves the typed name through `onCreate`, selects the new item and closes the list; failures stay open with a message. */
+  const create = async () => {
+    if (!onCreate || creating) return;
+    setCreating(true); setCreateError("");
+    try { choose(await onCreate(typed)); }
+    catch (e) { setCreateError(e instanceof Error ? e.message : `Could not create the ${createNoun}.`); }
+    finally { setCreating(false); }
+  };
+  const pick = (it: { value: string; create?: boolean; disabled?: boolean }) => { if (it.disabled) return; if (it.create) void create(); else choose(it.value); };
   const onKey = (e: KeyboardEvent) => {
     if (e.key === "ArrowDown") { e.preventDefault(); setActive((a) => step(a, 1)); }
     else if (e.key === "ArrowUp") { e.preventDefault(); setActive((a) => step(a, -1)); }
-    else if (e.key === "Enter") { e.preventDefault(); if (items[active] && !items[active].disabled) choose(items[active].value); }
+    else if (e.key === "Enter") { e.preventDefault(); if (items[active]) pick(items[active]); }
     else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); setOpen(false); } // Esc closes just the list, not the dialog around it
   };
 
@@ -105,21 +129,23 @@ export function AppCombobox({ label, options, value, onChange, placeholder, sear
               {items.map((it, n) => {
                 const isSel = String(value ?? "") === it.value;
                 return (
-                  <li key={`${it.value}-${n}`} role="option" aria-selected={isSel} aria-disabled={it.disabled || undefined} onMouseEnter={() => !it.disabled && setActive(n)} onMouseDown={(e) => { e.preventDefault(); if (!it.disabled) choose(it.value); }}
-                    className={`flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm ${it.disabled ? "cursor-not-allowed bg-slate-50 text-slate-400" : `cursor-pointer ${n === active ? "bg-indigo-50" : ""} ${it.clear ? "italic text-slate-500" : isSel ? "font-semibold text-indigo-700" : "text-slate-800"}`}`}>
-                    <span className="truncate">{it.label}</span>
-                    {it.disabled ? <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700">{it.hint ?? "Unavailable"}</span>
+                  <li key={`${it.value}-${n}`} role="option" aria-selected={isSel} aria-disabled={it.disabled || undefined} onMouseEnter={() => !it.disabled && setActive(n)} onMouseDown={(e) => { e.preventDefault(); pick(it); }}
+                    className={`flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm ${it.disabled ? "cursor-not-allowed bg-slate-50 text-slate-400" : `cursor-pointer ${n === active ? "bg-indigo-50" : ""} ${it.create ? "font-semibold text-indigo-700" : it.clear ? "italic text-slate-500" : isSel ? "font-semibold text-indigo-700" : "text-slate-800"}`}`}>
+                    <span className="truncate">{it.create && creating ? "Creating…" : it.label}</span>
+                    {it.create ? <Plus size={15} className="shrink-0 text-indigo-600" /> : it.disabled ? <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700">{it.hint ?? "Unavailable"}</span>
                       : isSel && !it.clear && <Check size={15} className="shrink-0 text-indigo-600" />}
                   </li>
                 );
               })}
-              {query && shown.length === 0 ? <li className="px-3 py-4 text-center text-sm text-slate-500">No matches for “{query}”</li> : null}
+              {query && shown.length === 0 && !canCreate ? <li className="px-3 py-4 text-center text-sm text-slate-500">No matches for “{query}”</li> : null}
               {!query && shown.length === 0 ? <li className="px-3 py-4 text-center text-sm text-slate-500">{emptyMessage ?? "Nothing to choose from yet"}</li> : null}
             </ul>
+            {createError && <p role="alert" className="border-t border-slate-100 px-3 py-1.5 text-xs text-red-600">{createError}</p>}
             {filtered.length > MAX_RENDERED && <p className="border-t border-slate-100 px-3 py-1.5 text-xs text-slate-500">Showing {MAX_RENDERED} of {filtered.length} — keep typing to narrow down.</p>}
           </div>
         )}
       </div>
+      {hint && !error && <p className="mt-1 text-xs text-slate-500">{hint}</p>}
       {error && <p role="alert" className="mt-1 text-xs text-red-600">{error}</p>}
     </div>
   );

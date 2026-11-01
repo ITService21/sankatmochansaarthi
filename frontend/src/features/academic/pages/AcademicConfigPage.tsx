@@ -87,7 +87,17 @@ function ItemForm({ resource, item, onClose, onSaved }: { resource: TaxonomyReso
   const boards = useTaxonomyOptions("boards", {}, resource === "chapters");
   const classes = useTaxonomyOptions("classes", {}, resource === "chapters");
   const subjects = useTaxonomyOptions("subjects", {}, resource === "chapters");
-  const chapters = useTaxonomyOptions("chapters", {}, resource === "topics");
+  // Topics: pick the Subject first, then only that subject's chapters (labelled with class and board, since names repeat).
+  const forTopic = resource === "topics";
+  const allChapters = useAsync(async () => (forTopic ? academicApi.options("chapters", {}) : []), [forTopic]);
+  const topicClasses = useTaxonomyOptions("classes", {}, forTopic);
+  const topicSubjects = useTaxonomyOptions("subjects", {}, forTopic);
+  const topicBoards = useTaxonomyOptions("boards", {}, forTopic);
+  // The subject of an existing topic comes from its chapter; until the user picks one, show that.
+  const chapterSubject = String(allChapters.data?.find((c) => String(c.id) === chapter)?.subject_id ?? "");
+  const topicSubject = subject || chapterSubject;
+  const chapterOptions = (allChapters.data ?? []).filter((c) => String(c.subject_id) === topicSubject || String(c.id) === chapter)
+    .map((c) => ({ value: c.id, label: [c.name, topicClasses.options.find((o) => o.value === c.class_id)?.label, topicBoards.options.find((o) => o.value === c.board_id)?.label].filter(Boolean).join(" · ") }));
 
   const parentErr = resource === "chapters" ? (!board || !cls || !subject ? "Choose a board, class and subject" : undefined) : resource === "topics" ? (!chapter ? "Choose a chapter" : undefined) : undefined;
   const nameErr = required(name, "Name");
@@ -113,7 +123,11 @@ function ItemForm({ resource, item, onClose, onSaved }: { resource: TaxonomyReso
             hint="A Science chapter only appears when a note's stream is Science; “General” chapters appear for every stream." />
           <AppSelect required label="Subject" placeholder="Select…" options={subjects.options} value={subject} onChange={setSubject} />
         </>}
-        {resource === "topics" && <AppSelect required label="Chapter" placeholder="Select…" options={chapters.options} value={chapter} onChange={setChapter} />}
+        {resource === "topics" && <>
+          <AppSelect required label="Subject" placeholder="Select…" options={topicSubjects.options} value={topicSubject} onChange={(v) => up({ subject: v, chapter: "" })} />
+          <AppSelect required label="Chapter" placeholder={topicSubject ? "Select…" : "Choose a subject first"} options={chapterOptions} value={chapter} onChange={setChapter} disabled={!topicSubject}
+            hint={topicSubject && !allChapters.loading && chapterOptions.length === 0 ? "This subject has no chapters yet. Add one in the Chapters tab first." : undefined} />
+        </>}
         {touched && parentErr && <p role="alert" className="text-xs text-red-600">{parentErr}</p>}
         <AppInput required label="Name" value={name} onChange={(e) => setName(e.target.value)} error={touched ? nameErr : undefined} />
         {["boards", "subjects", "languages", "material-types"].includes(resource) && <AppInput label="Code" value={code} onChange={(e) => setCode(e.target.value)} />}

@@ -2,6 +2,7 @@ import { AppCombobox, AppInput, AppSelect, AppTextarea } from "../../../shared/c
 import { useAuth } from "../../../shared/auth/AuthContext";
 import { positiveInt, required } from "../../../shared/forms/validation";
 import { Material } from "../../../shared/types";
+import { academicApi } from "../../academic/api/academic.api";
 import { useTaxonomyOptions } from "../../academic/components/useTaxonomyOptions";
 
 /** The details shared by every note in an upload (and edited for one note). Everything is a string, as typed in the form. */
@@ -110,6 +111,12 @@ export function NoteDetailsFields({ value: f, onChange, errors = {}, columns = 2
   const ctxReady = !!(f.board_id && f.class_id && f.subject_id && f.stream);
   const chapter = useTaxonomyOptions("chapters", { board_id: f.board_id, class_id: f.class_id, subject_id: f.subject_id, stream: f.stream }, ctxReady);
   const topic = useTaxonomyOptions("topics", { chapter_id: f.chapter_id }, !!f.chapter_id);
+  /** Type-to-create: saves a new topic under the chosen chapter and returns its id so it gets selected. */
+  const createTopic = async (name: string) => {
+    const t = await academicApi.create("topics", { name, chapter_id: Number(f.chapter_id) });
+    topic.addOption({ value: t.id, label: t.name });
+    return String(t.id);
+  };
   const sc = user?.role === "Admin" ? user.scopes : undefined;
   const streamName = STREAM_OPTIONS.find((o) => o.value === f.stream)?.label ?? "";
   const noChapters = `No ${streamName} chapters for this board, class and subject yet.${can("academic.manage") ? " Add one in Academic Setup → Chapters." : " Ask a Super Admin to add one."}`;
@@ -123,7 +130,7 @@ export function NoteDetailsFields({ value: f, onChange, errors = {}, columns = 2
       <AppCombobox required label="Subject" placeholder={f.stream ? "Select…" : "Choose a stream first"} options={subject.options.filter(inScope(sc?.subject_ids))} value={f.subject_id} onChange={set("subject_id")} disabled={!f.stream} error={errors.subject_id} />
       <AppCombobox required label="Chapter" placeholder={ctxReady ? "Select…" : "Choose the subject first"} options={chapter.options} value={f.chapter_id} onChange={set("chapter_id")} disabled={!ctxReady} error={errors.chapter_id}
         emptyMessage={chapter.loading ? "Loading chapters…" : noChapters} />
-      <AppCombobox label="Topic (optional)" placeholder={f.chapter_id ? "None" : "Choose a chapter first"} options={topic.options} value={f.topic_id} onChange={set("topic_id")} disabled={!f.chapter_id} emptyMessage={`This chapter has no topics yet — topics are optional, so you can leave this blank.${can("academic.manage") ? " Add some in Academic Setup → Topics." : ""}`} />
+      <AppCombobox label="Topic (optional)" createNoun="topic" onCreate={can("academic.manage") && f.chapter_id ? createTopic : undefined} placeholder={f.chapter_id ? "None" : "Choose a chapter first"} options={topic.options} value={f.topic_id} onChange={set("topic_id")} disabled={!f.chapter_id} emptyMessage={`This chapter has no topics yet — topics are optional, so you can leave this blank.${can("academic.manage") ? " Type a name to create one here." : ""}`} />
       <AppCombobox label="Material type" placeholder="Default (first type)" options={types.options} value={f.material_type_id} onChange={set("material_type_id")} />
       <AppSelect label="Access" options={[{ value: "free", label: "Free" }, { value: "paid", label: "Paid" }]} value={f.access_type} onChange={set("access_type")} />
       <AppInput label="Preview pages (blank = default)" inputMode="numeric" value={f.preview_page_limit} onChange={(ev) => set("preview_page_limit")(ev.target.value)} error={errors.preview_page_limit} />
