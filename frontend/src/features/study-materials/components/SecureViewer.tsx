@@ -1,5 +1,5 @@
 import * as pdfjs from "pdfjs-dist";
-import workerSrc from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+import PdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?worker";
 import { Lock, Maximize, Minimize, RotateCw, RotateCcw, RefreshCw, ZoomIn, ZoomOut } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "../../../shared/api/http-client";
@@ -7,7 +7,9 @@ import { useAuth } from "../../../shared/auth/AuthContext";
 import { AppButton, LoadingState } from "../../../shared/components";
 import { useContentProtection } from "./useContentProtection";
 
-pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
+// Bundled as a normal .js worker chunk: serving the raw .mjs file made the viewer fail on servers whose MIME table
+// lacks "mjs" (nginx sends application/octet-stream and browsers refuse to run it as a module worker).
+pdfjs.GlobalWorkerOptions.workerPort = new PdfWorker();
 
 /** Optional per-user watermark (off by default; enable with VITE_VIEWER_WATERMARK=true to make leaked captures traceable). */
 const WATERMARK_ENABLED = import.meta.env.VITE_VIEWER_WATERMARK === "true";
@@ -110,7 +112,7 @@ export function SecureViewer({ load, title, protect = true, className = "" }: { 
       const data = new Uint8Array(await blob.arrayBuffer());
       loaded = await pdfjs.getDocument({ data }).promise;
       if (live) setDoc(loaded); else void loaded.destroy();
-    }).catch((e) => { if (live) setError(friendly(e)); });
+    }).catch((e) => { console.error("[viewer] could not open note", e); if (live) setError(friendly(e)); });
     return () => { live = false; void loaded?.destroy(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [attempt]);
