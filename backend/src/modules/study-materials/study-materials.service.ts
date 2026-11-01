@@ -322,8 +322,8 @@ export const studyMaterialsService = {
   },
 
   /**
-   * Opens the limited preview for streaming. Authorised by MaterialAccessPolicy.canPreview; never falls
-   * back to the original file.
+   * Opens the limited preview for streaming. Authorised by MaterialAccessPolicy.canPreview; learners never fall
+   * back to the original file. Staff (isAdmin) receive the full original so they can review every page.
    * @returns `{ stream, filename }`
    * @throws 404 (not visible), 409 PREVIEW_UNAVAILABLE
    */
@@ -331,6 +331,8 @@ export const studyMaterialsService = {
     const m = await repo.findById(id);
     const ctx = await entitlementsService.getAccessContext(accessActor(actor), [id]);
     if (!m || !visibleTo(actor, m) || !MaterialAccessPolicy.canPreview(ctx, m)) throw notFound("Study material not found");
+    // Staff (Administrator / in-scope Admin) review the whole note, not the learner-facing page-limited preview.
+    if (isAdmin(actor)) return { stream: await openOrThrow(m.original_s3_key), filename: m.original_filename };
     if (m.preview_status !== "ready" || !m.preview_s3_key) throw conflict("Preview is not available", "PREVIEW_UNAVAILABLE");
     return { stream: await openOrThrow(m.preview_s3_key), filename: `preview-${m.original_filename}` };
   },

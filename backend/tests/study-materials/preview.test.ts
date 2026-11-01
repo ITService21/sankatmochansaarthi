@@ -49,6 +49,13 @@ describe("preview endpoint", () => {
     expect(await pageCount(storage.objects.get(row.preview_s3_key)!)).toBe(4);
   });
 
+  it("staff preview returns every page, not just the learner page limit", async () => {
+    const created = await uploadMaterial(admin, t, { pages: 8, extra: { preview_page_limit: "2" } });
+    const res = await api().get(`/api/v1/study-materials/${created.body.data.id}/preview`).set(auth(admin)).buffer(true).parse((r, cb) => { const c: Buffer[] = []; r.on("data", (d: Buffer) => c.push(d)); r.on("end", () => cb(null, Buffer.concat(c))); });
+    expect(res.status).toBe(200);
+    expect(await pageCount(res.body as Buffer)).toBe(8);
+  });
+
   it("unpublished / draft / soft-deleted materials cannot be previewed by students", async () => {
     const draft = (await uploadMaterial(admin, t)).body.data.id;
     expect((await api().get(`/api/v1/study-materials/${draft}/preview`).set(auth(student))).status).toBe(404);
@@ -75,7 +82,8 @@ describe("preview failure handling", () => {
     expect(failed.body.error.code).toBe("PREVIEW_GENERATION_FAILED");
     const [s] = await queryRows<{ preview_status: string }>("SELECT preview_status FROM study_materials WHERE id = ?", [id]);
     expect(s.preview_status).toBe("failed");
-    expect((await api().get(`/api/v1/study-materials/${id}/preview`).set(auth(admin)))).toMatchObject({ status: 409 });
+    // Staff review the full original, so a failed learner preview does not block them (the learner path still 409s).
+    expect((await api().get(`/api/v1/study-materials/${id}/preview`).set(auth(admin)))).toMatchObject({ status: 200 });
     const pub = await api().post(`/api/v1/study-materials/${id}/publish`).set(auth(admin));
     expect(pub.status).toBe(422);
     expect(pub.body.error.code).toBe("NOT_PUBLISHABLE");
