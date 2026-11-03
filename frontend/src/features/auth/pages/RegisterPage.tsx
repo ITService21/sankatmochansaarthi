@@ -58,7 +58,7 @@ export function RegisterPage() {
         {m.error != null && <ErrorState error={m.error} />}
         <AppButton type="submit" loading={m.loading} className="w-full !bg-blue-700 py-3 text-base hover:!bg-blue-800"><UserPlus size={18} />Create account</AppButton>
       </form>
-      <p className="mt-5 border-t pt-4 text-center text-sm text-slate-600">Already have an account? <Link className="font-semibold text-blue-700 underline" to="/login">Log in</Link></p>
+      <p className="mt-5 border-t pt-4 text-center text-sm text-slate-600">Already have an account? <Link className="font-semibold text-blue-700 underline" to="/login">Log in</Link><br />Run a school or institute? <Link className="font-semibold text-blue-700 underline" to="/register-organisation">Register your organisation</Link></p>
     </AuthLayout>
   );
 }

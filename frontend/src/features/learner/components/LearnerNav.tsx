@@ -2,7 +2,7 @@ import { ChevronDown, Crown, Download, Flame, KeyRound, LogOut, ShoppingBag } fr
 import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../../shared/auth/AuthContext";
-import { AppButton } from "../../../shared/components";
+import { AppButton, NotificationBell } from "../../../shared/components";
 import { toRoman } from "../../../shared/utils/roman";
 import { useLearnerClass } from "./useLearnerClass";
 
@@ -30,6 +30,7 @@ export function LearnerNav() {
         <nav aria-label="Learner" className="flex flex-wrap gap-1 rounded-xl bg-slate-100 p-1">
           <NavLink to="/study-materials" className={pill}>Home</NavLink>
           <NavLink to="/courses" className={pill}>Courses</NavLink>
+          {user?.role === "Student" && <NavLink to="/tests" className={pill}>Tests</NavLink>}
           {user && <NavLink to="/downloads" className={pill}>Downloads</NavLink>}
           <NavLink to="/contact" className={pill}>Contact Us</NavLink>
         </nav>
@@ -49,10 +50,13 @@ export function LearnerNav() {
                     <Link role="menuitem" className={item} to="/purchases" onClick={() => setOpen(false)}><ShoppingBag size={16} />My Purchases</Link>
                     <Link role="menuitem" className={item} to="/subscriptions" onClick={() => setOpen(false)}><Crown size={16} />My Subscriptions</Link>
                     <Link role="menuitem" className={item} to="/change-password" onClick={() => setOpen(false)}><KeyRound size={16} />Change password</Link>
+                    {user.role === "Student" && <Link role="menuitem" className={item} to="/dashboard" onClick={() => setOpen(false)}>My dashboard</Link>}
+                    {(user.role === "Teacher" || user.role === "Organisation") && <Link role="menuitem" className={item} to="/workspace" onClick={() => setOpen(false)}>My workspace</Link>}
                     {user.role === "Administrator" && <Link role="menuitem" className={item} to="/admin/materials" onClick={() => setOpen(false)}>Admin panel</Link>}
                   </div>
                 )}
               </div>
+              <NotificationBell />
               <button aria-label="Log out" title="Log out" onClick={() => { logout(); nav("/"); }} className="rounded-lg border border-slate-200 p-2.5 text-slate-600 hover:bg-slate-50"><LogOut size={18} /></button>
             </>
           ) : (

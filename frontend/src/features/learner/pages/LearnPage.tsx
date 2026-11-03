@@ -13,6 +13,7 @@ import { HierarchyBar } from "../components/HierarchyBar";
 import { NoteCard } from "../components/NoteCard";
 import { NotePreviewPane } from "../components/NotePreviewPane";
 import { useLearnerClass } from "../components/useLearnerClass";
+import { TestYourselfPanel } from "../../practice/TestYourselfPanel";
 import { WorkspaceSidebar } from "../components/WorkspaceSidebar";
 
 type ChapterItem = TaxonomyItem & { board_id: number; class_id: number; subject_id: number };
@@ -140,9 +141,12 @@ export function LearnPage() {
   ];
 
   /** The notes list or the full-width preview — rendered inside the normal layout or the full-screen focus overlay. */
+  const view = get("view");
   const mainContent = (
     <>
-          {noteId ? (
+          {view === "test" ? (
+            <TestYourselfPanel chapterId={chapterId} topicId={topicId} heading={`${subject ? `${subject}: ` : ""}${topic || chapter || "Choose a chapter"} - Test Yourself`} context={[boardName, cls && classLabel({ class_number: cls.class_number ?? null, name: cls.name }), subject].filter(Boolean).join(" • ")} />
+          ) : noteId ? (
             <NotePreviewPane noteId={Number(noteId)} onBack={() => patch({ note: "" })} onChanged={notes.reload} />
           ) : (
             <>
@@ -186,7 +190,7 @@ export function LearnPage() {
       {!focus && <HierarchyBar levels={levels} onChange={choose} />}
 
       <div className={`grid gap-4 ${showNav && !focus ? "lg:grid-cols-[300px_minmax(0,1fr)]" : ""}`}>
-        {showNav && !focus && <WorkspaceSidebar topics={allTopics.filter((t) => String(t.chapter_id) === chapterId)} hasChapter={!!chapterId} topicId={topicId} onTopic={(id) => choose("topic_id", id)} types={types} typeId={typeId} onType={(id) => patch({ type: id === String(types[0]?.id) ? "" : id, note: "", page: "" })} />}
+        {showNav && !focus && <WorkspaceSidebar practiceOn={view === "test"} onPractice={() => patch({ view: "test", note: "" })} topics={allTopics.filter((t) => String(t.chapter_id) === chapterId)} hasChapter={!!chapterId} topicId={topicId} onTopic={(id) => choose("topic_id", id)} types={types} typeId={typeId} onType={(id) => patch({ type: id === String(types[0]?.id) ? "" : id, note: "", page: "", view: "" })} />}
         {!focus && <section className="min-w-0 space-y-4">{mainContent}</section>}
       </div>
       {focus && createPortal(

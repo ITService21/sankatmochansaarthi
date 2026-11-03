@@ -1,6 +1,7 @@
 import { ErrorRequestHandler, RequestHandler } from "express";
 import { MulterError } from "multer";
 import { ZodError } from "zod";
+import { env } from "../../config/env";
 import { AppError } from "./app-error";
 
 /** 404 for unmatched routes (so they are logged like any other API failure). */
@@ -37,6 +38,12 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     message = "Request body is not valid JSON";
   } else {
     console.error("[error]", err);
+    // In development the real cause is returned so a developer sees e.g. "Table 'x.questions' doesn't exist" in the browser;
+    // production keeps the generic message so internals never reach a client.
+    if (env.nodeEnv === "development") {
+      message = err?.sqlMessage ?? err?.message ?? message;
+      details = { cause: err?.code ?? err?.name, stack: String(err?.stack ?? "").split("\n").slice(0, 6) };
+    }
   }
 
   res.locals.errorInfo = { code, message };

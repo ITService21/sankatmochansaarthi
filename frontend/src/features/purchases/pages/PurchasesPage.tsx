@@ -25,7 +25,7 @@ export function PurchasesPage() {
     <div className="space-y-6">
       <PageBanner eyebrow="My Purchases" title="Your purchased notes" subtitle="Everything you've bought stays available to download, any time." />
       <Card title="Purchased notes">
-        {notes.loading ? <LoadingState /> : notes.error != null ? <ErrorState error={notes.error} onRetry={notes.reload} />
+        {notes.loading && !notes.data ? <LoadingState /> : notes.error != null ? <ErrorState error={notes.error} onRetry={notes.reload} />
           : notes.data?.data.length ? <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{notes.data.data.map((m) => <MaterialCard key={m.id} m={m} onPreview={setPreview} onPaid={notes.reload} />)}</div>
           : <EmptyState message="You haven't purchased any notes yet." />}
       </Card>

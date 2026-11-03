@@ -19,10 +19,11 @@ interface Props<T> {
 
 /** Shared table with built-in loading and empty states. */
 export function AppTable<T>({ columns, rows, rowKey, loading, emptyMessage = "Nothing to show", onRowClick }: Props<T>) {
-  if (loading) return <LoadingState />;
+  // Keep showing the current rows while a refresh is running (after an action button): replacing them with a spinner shrinks the page and loses the scroll position.
+  if (loading && !rows.length) return <LoadingState />;
   if (!rows.length) return <EmptyState message={emptyMessage} />;
   return (
-    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-card">
+    <div aria-busy={loading || undefined} className={`overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-card transition-opacity ${loading ? "opacity-60" : ""}`}>
       <table className="min-w-full divide-y divide-slate-200 text-sm">
         <thead className="bg-slate-50">
           <tr>{columns.map((c) => <th key={c.key} className="px-3 py-2 text-left font-semibold text-slate-600">{c.header}</th>)}</tr>

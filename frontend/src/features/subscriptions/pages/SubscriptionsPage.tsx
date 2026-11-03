@@ -26,7 +26,7 @@ export function SubscriptionsPage() {
   return (
     <div className="space-y-6">
       <PageBanner eyebrow="My Subscriptions" title="Unlock every premium note" subtitle="One plan gives you full access to all paid notes while it is active." />
-      {plans.loading ? <LoadingState /> : plans.error != null ? <ErrorState error={plans.error} onRetry={plans.reload} /> : (
+      {plans.loading && !plans.data ? <LoadingState /> : plans.error != null ? <ErrorState error={plans.error} onRetry={plans.reload} /> : (
         <div className="grid gap-4 md:grid-cols-3">
           {plans.data?.map((p, i) => (
             <div key={p.id} className={`relative rounded-2xl border bg-white p-5 shadow-card ${i === 1 ? "border-indigo-400 ring-2 ring-indigo-100" : "border-slate-200"}`}>

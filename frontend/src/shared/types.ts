@@ -1,6 +1,6 @@
 /** API shapes shared across features (mirror backend DTOs). */
 /** "Administrator" is the Super Admin (shown as such in the UI); "Admin" is a delegated account with granted permissions + scope. */
-export type Role = "Administrator" | "Admin" | "Student" | "Teacher";
+export type Role = "Administrator" | "Admin" | "Student" | "Teacher" | "Organisation";
 export const roleLabel = (r: string) => (r === "Administrator" ? "Super Admin" : r);
 export interface AdminScopes { board_ids: number[]; class_ids: number[]; subject_ids: number[] }
 
@@ -29,7 +29,7 @@ export interface Material {
 
 export interface Plan { id: number; code: string; name: string; description: string | null; price_minor_units: number; currency: string; duration_days: number }
 export interface Subscription { id: number; status: "active" | "cancelled"; starts_at: string; ends_at: string; plan_name: string }
-export interface Payment { id: number; kind: "material" | "subscription"; amount_minor_units: number; currency: string; status: "pending" | "succeeded" | "failed"; provider: string; created_at: string }
+export interface Payment { id: number; kind: "material" | "subscription" | "exam"; amount_minor_units: number; currency: string; status: "pending" | "succeeded" | "failed"; provider: string; created_at: string }
 export interface CheckoutResponse { payment: Payment; checkout: Record<string, string | number> }
 
 export interface ApiLog {

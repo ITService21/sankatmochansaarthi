@@ -4,8 +4,9 @@ import { execute, queryOne, queryRows, Queryable } from "../../infrastructure/da
 export interface PaymentRow {
   id: number;
   user_id: number;
-  kind: "material" | "subscription";
+  kind: "material" | "subscription" | "exam";
   material_id: number | null;
+  exam_id: number | null;
   plan_id: number | null;
   amount_minor_units: number;
   currency: string;
@@ -35,11 +36,11 @@ export const paymentsRepository = {
     return queryRows<PaymentRow>("SELECT * FROM payments WHERE user_id = ? AND deleted_at IS NULL ORDER BY id DESC LIMIT 100", [userId]);
   },
   /** Inserts a pending payment. @throws ER_DUP_ENTRY when (user, idempotency key) already exists */
-  async insertPending(v: Pick<PaymentRow, "user_id" | "kind" | "material_id" | "plan_id" | "amount_minor_units" | "currency" | "provider" | "idempotency_key" | "request_fingerprint">): Promise<number> {
+  async insertPending(v: Pick<PaymentRow, "user_id" | "kind" | "material_id" | "exam_id" | "plan_id" | "amount_minor_units" | "currency" | "provider" | "idempotency_key" | "request_fingerprint">): Promise<number> {
     const res = await execute(
-      `INSERT INTO payments (user_id, kind, material_id, plan_id, amount_minor_units, currency, status, provider, idempotency_key, request_fingerprint)
-       VALUES (?,?,?,?,?,?, 'pending', ?,?,?)`,
-      [v.user_id, v.kind, v.material_id, v.plan_id, v.amount_minor_units, v.currency, v.provider, v.idempotency_key, v.request_fingerprint]);
+      `INSERT INTO payments (user_id, kind, material_id, exam_id, plan_id, amount_minor_units, currency, status, provider, idempotency_key, request_fingerprint)
+       VALUES (?,?,?,?,?,?,?, 'pending', ?,?,?)`,
+      [v.user_id, v.kind, v.material_id, v.exam_id, v.plan_id, v.amount_minor_units, v.currency, v.provider, v.idempotency_key, v.request_fingerprint]);
     return res.insertId;
   },
   /** Stores the provider order id once (only while it is still null). */

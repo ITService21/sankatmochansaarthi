@@ -19,7 +19,7 @@ export function AccessEditor({ value, onChange }: { value: Access; onChange: (a:
   const boards = useTaxonomyOptions("boards");
   const classes = useTaxonomyOptions("classes");
   const subjects = useTaxonomyOptions("subjects");
-  if (catalog.loading) return <LoadingState />;
+  if (catalog.loading && !catalog.data) return <LoadingState />;
   if (catalog.error != null) return <ErrorState error={catalog.error} onRetry={catalog.reload} />;
 
   const groups = [...new Set(catalog.data!.permissions.map((p) => p.group))];

@@ -20,7 +20,7 @@ export function LoginPage() {
   const [touched, setTouched] = useState(false);
   const m = useMutation(async () => {
     const u = await login(username.trim(), password);
-    nav(u.must_change_password ? "/change-password" : loc.state?.from ?? (u.role === "Administrator" ? "/admin/materials" : "/study-materials"), { replace: true });
+    nav(u.must_change_password ? "/change-password" : loc.state?.from ?? (u.role === "Administrator" || u.role === "Admin" ? "/admin" : u.role === "Teacher" || u.role === "Organisation" ? "/workspace" : "/study-materials"), { replace: true });
   });
 
   const submit = (e: FormEvent) => { e.preventDefault(); setTouched(true); if (!required(username) && !required(password)) void m.run(); };

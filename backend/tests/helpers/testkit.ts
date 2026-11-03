@@ -21,6 +21,11 @@ export let storage: MemoryMaterialStorage;
 export let fakeProvider: FakePaymentProvider;
 
 const TABLES = [
+  "syllabus_topics", "syllabus_chapters", "syllabi",
+  "exam_entitlements",
+  "notifications", "evaluations", "answer_sheet_uploads", "attempt_answers", "exam_attempts", "exam_assignments", "exams", "batch_members", "batches", "student_profiles",
+  "paper_files", "paper_questions", "question_papers",
+  "question_versions", "question_options", "questions", "teacher_assignments", "organisation_members", "organisations",
   "upload_drafts", "admin_permissions", "admin_scopes", "user_identities", "user_downloads", "user_activity_days", "callback_requests", "payment_webhook_events", "user_subscriptions", "material_entitlements", "payments", "storage_cleanup_queue", "study_materials",
   "academic_topics", "academic_chapters", "academic_boards", "academic_classes", "academic_subjects", "languages",
   "audit_events", "api_hit_logs", "global_config", "users", "subscription_plans", "material_types", "roles",

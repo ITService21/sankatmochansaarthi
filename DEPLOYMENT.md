@@ -108,6 +108,14 @@ MAX_UPLOAD_MB=25
 MAX_UPLOAD_FILES=10                 # files per "Add notes" batch
 DRAFT_RETENTION_DAYS=14
 DOCX_CONVERTER=auto                # LibreOffice if installed (recommended: see §2), else basic text conversion
+
+# AI answer-sheet evaluation (OCR + marking) — see "AI evaluation service" below
+AI_PROVIDER=http                   # fake (dev/tests) | http (your service) | off
+AI_API_URL=https://ocr.example.com/evaluate
+AI_API_KEY=<bearer token for your service>
+AI_TIMEOUT_MS=120000
+AI_REVIEW_CONFIDENCE=0.7           # answers the AI is less sure about are flagged for a teacher
+AI_AUTO_EVALUATE=true              # start evaluating as soon as a sheet / descriptive attempt is submitted
 ADMIN_JWT_EXPIRES_IN=7d            # Super Admin / Admin session length
 
 PAYMENT_PROVIDER=razorpay
@@ -141,6 +149,9 @@ types, and these accounts (only if missing — an existing account's password is
 | Teacher | `teacher1` | `Teacher@12345` |
 | Admin (CBSE notes only) | `admin_cbse` | `AdminCbse@12345` |
 | Admin (ICSE notes only) | `admin_icse` | `AdminIcse@12345` |
+| Organisation (demo school owner) | `org1` | `Org@12345` |
+| Teacher (in the demo school) | `org_teacher1` | `OrgTeacher@12345` |
+| Student (in the demo school) | `org_student1` | `OrgStudent@12345` |
 
 > **These passwords are in the source code.** Anyone who can read the repository can log in as the Administrator.
 > Keep the repo private, and **change the Administrator password right after the first login** (user menu → Change
@@ -277,6 +288,43 @@ cd ../frontend && npm ci && npm run build && sudo rsync -a --delete dist/ /var/w
 - [ ] Admin → API Logs shows requests; ports 4000 and 3306 are not reachable from outside (`nmap`/online port check).
 - [ ] A backup has run and a restore has been tried at least once.
 
+## 11b. Examination platform (organisations, question bank, exams)
+
+Roles: **Organisation** (a school/institute owner), **Teacher**, **Student**, plus staff. Organisations register at `/register-organisation`
+(or staff create them in Admin → Organisations), then add their own teachers and students. Migrations `008`–`012` add the tables; run
+`npm run migrate` after pulling. Staff permissions added to the Users → Access editor: *Manage question bank*, *Manage papers & exams*,
+*Manage organisations*. Everything on every dashboard is read from the database for the signed-in user.
+
+* **Offline answer sheets** are stored in object storage (same bucket as notes, under `answer-sheets/`) and are only served through the API to the
+  student who uploaded them and the people running the exam. Raise Nginx `client_max_body_size` for photographed pages (≥ `MAX_UPLOAD_MB` × 40).
+* **Timers are server-side.** The scheduler (every minute) auto-submits timed-out attempts, finalises answer sheets past their deadline and runs
+  pending AI evaluations — keep the API process running (it hosts the scheduler).
+* **Paid tests** reuse the payment flow (`kind: "exam"`): idempotent checkout, signature-verified webhooks, one entitlement per payment, and an active
+  subscription also unlocks paid tests.
+
+### AI evaluation service
+
+The platform does not contain OCR/AI code: it calls **your** evaluation service (e.g. a Gemini-based pipeline) over HTTP, so you can run and scale it
+independently. Set `AI_PROVIDER=http`, `AI_API_URL`, `AI_API_KEY`.
+
+```
+POST {AI_API_URL}        Authorization: Bearer {AI_API_KEY}      Content-Type: application/json
+request  = { exam_name,
+             questions: [{ question_id, number, type: "mcq|short|medium|long", text, max_marks,
+                           expected_answer, reference_answer, keywords, rubric (all may be null/empty: then mark from your own subject knowledge and lower the confidence), options?: [{label:"a", body}] }],
+             pages?:         [{ index, mime_type, name, data_base64 }],      // offline exams: the scanned answer sheet
+             typed_answers?: [{ question_id, answer_text }] }                // online exams: typed descriptive answers
+response = { items: [{ question_id, answer_text, marks, feedback, confidence /* 0..1 */ }], pages_processed? }
+```
+
+* For offline sheets the service finds each question's answer on the pages and reads the handwriting; for an MCQ it returns the ticked letter(s) in
+  `answer_text` (`"b"` or `"a,c"`) and the platform does the marking, including negative marking.
+* The platform retries 5xx/network errors twice, rejects malformed replies (nothing is written), clamps marks to `0..max_marks`, stores the AI's marks,
+  feedback and confidence next to the teacher's final marks, and flags answers with `confidence < AI_REVIEW_CONFIDENCE` or no answer found.
+  **Results are published only after a teacher approves**, unless the exam is set to publish automatically *and* nothing was flagged.
+* A failed evaluation leaves the attempt in "Evaluation pending" (retry from the review page, or mark by hand); costs/failures are recorded per run in
+  the `evaluations` table and shown on the dashboards.
+
 ## 12. Troubleshooting
 
 | Symptom | Check |
@@ -285,6 +333,7 @@ cd ../frontend && npm ci && npm run build && sudo rsync -a --delete dist/ /var/w
 | Login returns 500 | DB unreachable or migrations not run: `npm run migrate`. |
 | Upload fails with 413 | Raise `client_max_body_size` (Nginx) to at least `MAX_UPLOAD_MB` × `MAX_UPLOAD_FILES`. |
 | Word files convert with "Basic conversion" | LibreOffice is not installed: `sudo apt install libreoffice-writer`, then restart the API. |
+| "Evaluation pending" never moves | `AI_PROVIDER`/`AI_API_URL` not set or the service is down: see `evaluations.error`, then retry from the review page or mark manually. |
 | Payments never complete | Webhook URL/secret mismatch; `PAYMENT_PROVIDER` still `fake`; check Razorpay webhook delivery log. |
 | Google/Microsoft "redirect_uri_mismatch" | Redirect URI in the provider console must match `OAUTH_REDIRECT_BASE` exactly (https, no trailing slash). |
 | Lost Administrator password | Set `ADMIN_BOOTSTRAP_PASSWORD` in `.env`, then `cd backend && npm run admin:reset -- --keep-password`. |

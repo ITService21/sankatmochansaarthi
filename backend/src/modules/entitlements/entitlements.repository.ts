@@ -40,4 +40,15 @@ export const entitlementsRepository = {
     );
     return res.affectedRows === 1;
   },
+
+  /** Grants a purchased exam (UNIQUE(payment_id) + INSERT IGNORE: once per payment). @returns true when newly created */
+  async grantExamForPayment(conn: PoolConnection, userId: number, examId: number, paymentId: number): Promise<boolean> {
+    const res = await execute("INSERT IGNORE INTO exam_entitlements (user_id, exam_id, source, payment_id) VALUES (?,?, 'purchase', ?)", [userId, examId, paymentId], conn);
+    return res.affectedRows === 1;
+  },
+
+  /** @returns whether the user owns a non-revoked entitlement for the exam. */
+  async hasExamEntitlement(userId: number, examId: number, db?: Queryable): Promise<boolean> {
+    return (await queryRows("SELECT id FROM exam_entitlements WHERE user_id = ? AND exam_id = ? AND revoked_at IS NULL LIMIT 1", [userId, examId], db)).length > 0;
+  },
 };

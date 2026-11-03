@@ -1,6 +1,8 @@
 /**
  * Application role names. Stored in the `roles` table (seeded by seeds/roles.seed.ts).
  *  - Administrator = the SUPER ADMIN: every permission, unrestricted, can create/manage Admin accounts.
+
+ *  - Organisation  = a school / coaching institute owner: manages its own teachers, students, questions and exams.
  *  - Admin         = a delegated staff account: only the permissions and board/class/subject scope the Super Admin granted.
  */
 export const ROLES = {
@@ -8,9 +10,10 @@ export const ROLES = {
   ADMIN: "Admin",
   STUDENT: "Student",
   TEACHER: "Teacher",
+  ORGANISATION: "Organisation",
 } as const;
 
 export type RoleName = (typeof ROLES)[keyof typeof ROLES];
-export const SELF_REGISTERABLE_ROLES: RoleName[] = [ROLES.STUDENT, ROLES.TEACHER];
+export const SELF_REGISTERABLE_ROLES: RoleName[] = [ROLES.STUDENT, ROLES.TEACHER]; // organisations register through POST /organisations/register
 /** Roles that sign in to the admin panel (and therefore get the longer admin session). */
 export const STAFF_ROLES: string[] = [ROLES.ADMINISTRATOR, ROLES.ADMIN];

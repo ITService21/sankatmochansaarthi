@@ -1,16 +1,23 @@
-import { ChevronDown, ExternalLink, GraduationCap, KeyRound, LogOut, LucideIcon, Menu, PhoneCall, ScrollText, Search, Settings, ShieldCheck, Users, X } from "lucide-react";
+import { BarChart3, BookOpen, Building2, ClipboardList, FileText, HelpCircle, ChevronDown, ExternalLink, GraduationCap, KeyRound, LogOut, LucideIcon, Menu, PhoneCall, ScrollText, Search, Settings, ShieldCheck, Users, X } from "lucide-react";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { roleLabel } from "../types";
 import { BrandLogo } from "./BrandLogo";
+import { NotificationBell } from "./NotificationBell";
 
-interface NavItem { to?: string; label: string; icon: LucideIcon; end?: boolean; soon?: boolean; /** any one of these feature permissions shows the item */ permission?: string[]; superOnly?: boolean }
+export interface NavItem { to?: string; label: string; icon: LucideIcon; end?: boolean; soon?: boolean; /** any one of these feature permissions shows the item */ permission?: string[]; superOnly?: boolean }
 
 /** Sidebar entries; each shows only when the signed-in staff member has the matching permission (Super Admin sees all). */
 export const ADMIN_NAV: NavItem[] = [
+  { to: "/admin/overview", label: "Overview", icon: BarChart3, permission: ["exams.manage", "organisations.manage"] },
+  { to: "/admin/organisations", label: "Organisations", icon: Building2, permission: ["organisations.manage"] },
   { to: "/admin/materials", label: "Manage Notes", icon: GraduationCap, permission: ["materials.view", "materials.create"] },
   { to: "/admin/academic", label: "Academic Setup", icon: ShieldCheck, permission: ["academic.manage"] },
+  { to: "/admin/syllabus", label: "Syllabus", icon: BookOpen, permission: ["academic.manage"] },
+  { to: "/admin/questions", label: "Question Bank", icon: HelpCircle, permission: ["questions.manage"] },
+  { to: "/admin/papers", label: "Question Papers", icon: FileText, permission: ["exams.manage"] },
+  { to: "/admin/exams", label: "Exams", icon: ClipboardList, permission: ["exams.manage"] },
   { to: "/admin/users", label: "Users", icon: Users, permission: ["users.manage"] },
   { to: "/admin/callback-requests", label: "Callback Requests", icon: PhoneCall, permission: ["callbacks.manage"] },
   { to: "/admin/api-hit-logs", label: "API Logs", icon: ScrollText, superOnly: true },
@@ -44,12 +51,11 @@ function NavGroup({ items, onNavigate }: { items: NavItem[]; onNavigate?: () => 
   );
 }
 
-function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
-  const items = useAllowedNav();
+function Sidebar({ onNavigate, items, label }: { onNavigate?: () => void; items: NavItem[]; label: string }) {
   return (
-    <nav className="space-y-6" aria-label="Administration">
+    <nav className="space-y-6" aria-label={label}>
       <div>
-        <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Administration</p>
+        <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">{label}</p>
         <NavGroup items={items} onNavigate={onNavigate} />
       </div>
       <NavLink to="/study-materials" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50"><ExternalLink size={19} />View learner site</NavLink>
@@ -88,10 +94,19 @@ function UserMenu() {
 
 /** Administrator chrome: top bar (logo, search, user menu) + admin sidebar (drawer on mobile). Learner pages use LearnerShell. */
 export function AdminShell() {
+  const items = useAllowedNav();
+  return <PanelShell items={items} label="Administration" home="/admin" noteSearch />;
+}
+
+/**
+ * The shared panel chrome (top bar + sidebar drawer). AdminShell uses it for staff; the teacher / organisation workspace passes its own items.
+ * @param noteSearch show the "Search notes" box (staff with note access only)
+ */
+export function PanelShell({ items, label, home, noteSearch = false }: { items: NavItem[]; label: string; home: string; noteSearch?: boolean }) {
   const nav = useNavigate();
   const loc = useLocation();
   const { can } = useAuth();
-  const canSearch = can("materials.view");
+  const canSearch = noteSearch && can("materials.view");
   const [drawer, setDrawer] = useState(false);
   const [q, setQ] = useState("");
     useEffect(() => { setDrawer(false); }, [loc.pathname]);
@@ -101,22 +116,22 @@ export function AdminShell() {
     <div className="min-h-screen">
       <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b bg-white px-4">
         <button className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden" aria-label="Open menu" onClick={() => setDrawer(true)}><Menu size={22} /></button>
-        <NavLink to="/admin" aria-label="Admin home" className="shrink-0"><BrandLogo height={44} /></NavLink>
+        <NavLink to={home} aria-label="Home" className="shrink-0"><BrandLogo height={44} /></NavLink>
         {canSearch ? <form onSubmit={search} role="search" className="relative mx-2 hidden max-w-xl flex-1 md:block">
           <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search notes…" aria-label="Search notes"
             className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-3 text-sm outline-none focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-100" />
         </form> : <span className="flex-1" />}
-        <div className="ml-auto"><UserMenu /></div>
+        <div className="ml-auto flex items-center gap-2"><NotificationBell /><UserMenu /></div>
       </header>
       <div className="flex">
-        <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-64 shrink-0 overflow-y-auto border-r bg-white p-4 lg:block"><Sidebar /></aside>
+        <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-64 shrink-0 overflow-y-auto border-r bg-white p-4 lg:block"><Sidebar items={items} label={label} /></aside>
         {drawer && (
           <div className="fixed inset-0 z-40 lg:hidden" onMouseDown={() => setDrawer(false)}>
             <div className="absolute inset-0 bg-slate-900/50" />
             <aside className="absolute inset-y-0 left-0 w-72 overflow-y-auto bg-white p-4 shadow-xl" onMouseDown={(e) => e.stopPropagation()}>
               <div className="mb-4 flex items-center justify-between"><BrandLogo height={40} /><button aria-label="Close menu" onClick={() => setDrawer(false)} className="rounded-lg p-2 hover:bg-slate-100"><X size={20} /></button></div>
-              <Sidebar onNavigate={() => setDrawer(false)} />
+              <Sidebar items={items} label={label} onNavigate={() => setDrawer(false)} />
             </aside>
           </div>
         )}

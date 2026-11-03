@@ -184,7 +184,8 @@ export interface TaxonomySelection {
   subject_id: number;
   chapter_id: number;
   topic_id?: number | null;
-  language_id: number;
+  /** Optional: only notes carry a language; questions skip it. */
+  language_id?: number;
   /** When given, the chapter must be "general" or the same stream. */
   stream?: "science" | "commerce" | "general";
 }
@@ -204,7 +205,7 @@ export async function assertTaxonomyConsistent(sel: TaxonomySelection, conn?: Po
   await active("academic_boards", sel.board_id, "Board");
   await active("academic_classes", sel.class_id, "Class");
   await active("academic_subjects", sel.subject_id, "Subject");
-  await active("languages", sel.language_id, "Language");
+  if (sel.language_id) await active("languages", sel.language_id, "Language");
   await active("academic_chapters", sel.chapter_id, "Chapter");
   const chapter = (await queryOne<{ board_id: number; class_id: number; subject_id: number; stream: string }>(
     "SELECT board_id, class_id, subject_id, stream FROM academic_chapters WHERE id = ?", [sel.chapter_id], conn))!;

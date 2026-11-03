@@ -1,7 +1,7 @@
 import { http } from "../../../shared/api/http-client";
 import { CheckoutResponse, Payment } from "../../../shared/types";
 
-export type CheckoutTarget = { kind: "material"; material_id: number } | { kind: "subscription"; plan_id: number };
+export type CheckoutTarget = { kind: "material"; material_id: number } | { kind: "subscription"; plan_id: number } | { kind: "exam"; exam_id: number };
 
 export const paymentsApi = {
   /** Starts a checkout. The Idempotency-Key makes retries (double click, network retry) safe. */

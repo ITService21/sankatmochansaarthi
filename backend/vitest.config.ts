@@ -12,6 +12,8 @@ export const testEnv = {
   DB_PASSWORD: process.env.TEST_DB_PASSWORD ?? "",
   DB_NAME: process.env.TEST_DB_NAME ?? "edu_test",
   STORAGE_DRIVER: "memory",
+  AI_PROVIDER: "fake",
+  AI_AUTO_EVALUATE: "false", // tests trigger evaluation explicitly so statuses never change under them
   PAYMENT_PROVIDER: "fake",
   PAYMENT_WEBHOOK_SECRET: "test-webhook-secret",
   JWT_SECRET: "test-jwt-secret",

@@ -5,6 +5,7 @@ import { ROLES } from "../../config/roles";
 import { recordAudit } from "../../common/audit/audit.service";
 import { AppError, badRequest, conflict, forbidden, notFound, unprocessable } from "../../common/errors/app-error";
 import { claimWebhookEvent, fingerprint } from "../../common/idempotency/idempotency.service";
+import { queryOne } from "../../infrastructure/database/database";
 import { withTransaction } from "../../infrastructure/database/transaction";
 import { entitlementsRepository } from "../entitlements/entitlements.repository";
 import { entitlementsService } from "../entitlements/entitlements.service";
@@ -19,6 +20,7 @@ import { PaymentRow, paymentsRepository as repo } from "./payments.repository";
 export const checkoutSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("material"), material_id: z.number().int().positive() }).strict(),
   z.object({ kind: z.literal("subscription"), plan_id: z.number().int().positive() }).strict(),
+  z.object({ kind: z.literal("exam"), exam_id: z.number().int().positive() }).strict(),
 ]);
 
 /** Idempotency-Key header: 8-100 chars of [A-Za-z0-9_-]. */
@@ -27,7 +29,7 @@ export const idempotencyKeySchema = z.string().regex(/^[A-Za-z0-9_-]{8,100}$/, "
 /** Public payment shape (no internal fingerprint). */
 export function toPaymentDto(p: PaymentRow) {
   return {
-    id: p.id, kind: p.kind, material_id: p.material_id, plan_id: p.plan_id,
+    id: p.id, kind: p.kind, material_id: p.material_id, exam_id: p.exam_id, plan_id: p.plan_id,
     amount_minor_units: Number(p.amount_minor_units), currency: p.currency, status: p.status,
     provider: p.provider, provider_order_id: p.provider_order_id, failure_reason: p.failure_reason,
     paid_at: p.paid_at, created_at: p.created_at,
@@ -57,6 +59,7 @@ async function settle(conn: PoolConnection, payment: PaymentRow, outcome: Outcom
   }
   await repo.markSucceeded(conn, payment.id, outcome.providerPaymentId, now);
   if (payment.kind === "material") await entitlementsRepository.grantForPayment(conn, payment.user_id, payment.material_id!, payment.id);
+  else if (payment.kind === "exam") await entitlementsRepository.grantExamForPayment(conn, payment.user_id, payment.exam_id!, payment.id);
   else await subscriptionsService.activateForPayment(conn, payment.user_id, payment.plan_id!, payment.id, now);
   await recordAudit(conn, null, "payment.succeeded", "payments", payment.id, { kind: payment.kind });
   return "succeeded";
@@ -93,7 +96,7 @@ export const paymentsService = {
 
     if (!payment) {
       // 2) Resolve what is being bought and how much it costs (server-side truth).
-      let amount: number; let currency: string; let materialId: number | null = null; let planId: number | null = null;
+      let amount: number; let currency: string; let materialId: number | null = null; let planId: number | null = null; let examId: number | null = null;
       if (body.kind === "material") {
         const m = await studyMaterialsRepository.findById(body.material_id);
         if (!m || m.status !== "published") throw notFound("Study material not found");
@@ -101,6 +104,14 @@ export const paymentsService = {
         const ctx = await entitlementsService.getAccessContext(user, [m.id]);
         if (ctx.entitledMaterialIds.has(m.id) || ctx.hasActiveSubscription) throw conflict("You already have access to this material", "ALREADY_ENTITLED");
         ({ amount, currency, materialId } = { amount: Number(m.price_minor_units), currency: m.currency, materialId: m.id });
+      } else if (body.kind === "exam") {
+        const e = await queryOne<{ id: number; price_minor_units: string; currency: string; status: string; ends_at: Date; is_public: number }>("SELECT id, price_minor_units, currency, status, ends_at, is_public FROM exams WHERE id = ? AND deleted_at IS NULL", [body.exam_id]);
+        const assigned = e && (await queryOne("SELECT 1 FROM exam_assignments WHERE exam_id = ? AND student_user_id = ? AND deleted_at IS NULL", [e.id, user.id]));
+        if (!e || e.status !== "scheduled" || (!e.is_public && !assigned)) throw notFound("Test not found");
+        if (!Number(e.price_minor_units)) throw badRequest("This test is free and cannot be purchased", undefined, "NOT_PAYABLE");
+        if (e.ends_at.getTime() < Date.now()) throw badRequest("This test has ended", undefined, "NOT_PAYABLE");
+        if ((await entitlementsRepository.hasExamEntitlement(user.id, e.id)) || (await entitlementsRepository.hasActiveSubscription(user.id, new Date()))) throw conflict("You already have access to this test", "ALREADY_ENTITLED");
+        ({ amount, currency, examId } = { amount: Number(e.price_minor_units), currency: e.currency, examId: e.id });
       } else {
         const plan = await subscriptionsRepository.getPlan(body.plan_id);
         if (!plan || !plan.is_active) throw notFound("Subscription plan not found");
@@ -108,7 +119,7 @@ export const paymentsService = {
       }
       try {
         const id = await repo.insertPending({
-          user_id: user.id, kind: body.kind, material_id: materialId, plan_id: planId, amount_minor_units: amount, currency,
+          user_id: user.id, kind: body.kind, material_id: materialId, exam_id: examId, plan_id: planId, amount_minor_units: amount, currency,
           provider: provider.name, idempotency_key: key.data, request_fingerprint: fp,
         });
         payment = (await repo.findById(id))!;

@@ -13,7 +13,7 @@ export function SettingsPage() {
   const canSettings = can("settings.manage"), canContact = can("site_contact.manage");
   // Each block appears only for staff who hold its permission (the server enforces the same rule).
   const { data, error, loading, reload } = useAsync(() => (canSettings ? adminApi.settings() : Promise.resolve([] as Setting[])), [canSettings]);
-  if (loading) return <LoadingState />;
+  if (loading && !data) return <LoadingState />;
   if (error != null) return <ErrorState error={error} onRetry={reload} />;
   return (
     <div>

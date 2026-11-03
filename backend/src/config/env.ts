@@ -64,6 +64,20 @@ export const env = {
     docxConverter: str("DOCX_CONVERTER", "auto") as "auto" | "libreoffice" | "basic",
     libreOfficeBin: str("LIBREOFFICE_BIN", "soffice"),
   },
+  /**
+   * AI answer-sheet evaluation (OCR + marking). The platform talks to YOUR evaluation service over a small HTTP contract
+   * (see DEPLOYMENT.md "AI evaluation service"); "fake" is a deterministic stand-in for development and tests.
+   */
+  ai: {
+    provider: str("AI_PROVIDER", "fake") as "fake" | "http" | "off",
+    url: str("AI_API_URL", ""),
+    apiKey: str("AI_API_KEY", ""),
+    timeoutMs: num("AI_TIMEOUT_MS", 120_000),
+    /** Marks the AI is less sure about than this (0-1) are flagged for teacher review. */
+    reviewConfidence: Number(process.env.AI_REVIEW_CONFIDENCE ?? 0.7),
+    /** Start evaluation automatically when an answer sheet / descriptive attempt is submitted. */
+    autoEvaluate: (process.env.AI_AUTO_EVALUATE ?? "true").toLowerCase() !== "false",
+  },
   payment: {
     provider: str("PAYMENT_PROVIDER", "fake") as "fake" | "razorpay",
     webhookSecret: str("PAYMENT_WEBHOOK_SECRET", "dev-webhook-secret"),

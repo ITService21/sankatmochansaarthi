@@ -18,11 +18,19 @@ npm run dev                     # http://localhost:4000
 cd frontend && npm install && npm run dev    # http://localhost:5173 (proxies /api to :4000)
 ```
 
-* **Default accounts** (created by `npm run migrate` if missing, never overwritten): `Administrator` / `Admin@18212004`, `student1` / `Student@12345`, `teacher1` / `Teacher@12345`.
+* **Default accounts** (created by `npm run migrate` if missing, never overwritten): `Administrator` / `Admin@18212004`, `student1` / `Student@12345`, `teacher1` / `Teacher@12345`; demo school `org1` / `Org@12345` (with `org_teacher1` / `OrgTeacher@12345` and `org_student1` / `OrgStudent@12345`).
+  `npm run seed -- --demo` also gives the demo school a question bank, a published paper and a free exam.
   These are in source control — keep the repo private and change the Administrator password on a live site. `SEED_DEFAULT_ACCOUNTS=false` skips them.
 * Local dev uses `STORAGE_DRIVER=local` (files under `backend/storage-data`) and `PAYMENT_PROVIDER=fake`
   (a "Simulate payment" button appears in checkout). Production: `STORAGE_DRIVER=s3` + a **private** bucket,
   `PAYMENT_PROVIDER=razorpay`.
+
+## Examination platform
+
+Organisations (schools/institutes) manage teachers and students; teachers build a **question bank** (MCQ, short, medium, long; duplicates blocked; versioned),
+generate **question papers** (automatic by pattern or manual, several sets, PDF + answer key), **schedule exams** (online with server-side timer and autosave, or
+offline with handwritten answer-sheet upload), and review **AI-suggested marks** before publishing results. Students see dashboards, tests, results and progress;
+paid tests use the payment flow. API tests: `backend/tests/{organisations,question-bank,papers,exams,academic}`. AI service contract: `DEPLOYMENT.md` §11b.
 
 ## Social sign-in (Google / Microsoft)
 

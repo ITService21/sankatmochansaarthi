@@ -27,3 +27,4 @@ export * from "./MultiFileDropzone";
 export * from "./DraftNotice";
 export * from "./Toast";
 export * from "./FieldLabel";
+export * from "./NotificationBell";
