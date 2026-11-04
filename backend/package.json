@@ -1,0 +1,46 @@
+{
+  "name": "education-site-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit",
+    "migrate": "tsx src/infrastructure/database/migrate.ts",
+    "seed": "tsx src/seeds/run-seeds.ts",
+    "test": "vitest run",
+    "admin:reset": "tsx src/seeds/reset-admin-password.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.967.0",
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.9",
+    "express": "^4.22.3",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "jszip": "^3.10.2",
+    "multer": "^2.5.0",
+    "mysql2": "^3.24.6",
+    "node-cron": "^4.2.1",
+    "pdf-lib": "^1.17.1",
+    "tsx": "^4.23.15",
+    "uuid": "^14.0.3",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^4.17.25",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer": "^2.3.0",
+    "@types/node": "^18.19.130",
+    "@types/node-cron": "^3.0.11",
+    "@types/supertest": "^7.2.1",
+    "@types/uuid": "^10.0.0",
+    "supertest": "^7.3.1",
+    "typescript": "^7.0.2",
+    "vitest": "^3.2.7"
+  }
+}

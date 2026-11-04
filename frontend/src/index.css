@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body { @apply bg-slate-50 font-sans text-slate-800 antialiased; }
+
+.font-display { font-family: "Cormorant Garamond", Georgia, serif; font-variant: small-caps; letter-spacing: 0.01em; }
+.hide-scrollbar { scrollbar-width: none; }
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+
+/* Notes can never be printed from the browser. */
+@media print {
+  .secure-viewer { display: none !important; }
+  body::before { content: "Printing is disabled for study materials."; display: block; padding: 2rem; font-size: 1.25rem; }
+}
+
+@keyframes heroProgress { from { width: 0%; } to { width: 100%; } }
