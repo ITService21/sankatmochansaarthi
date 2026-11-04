@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { AlertTriangle, ArrowLeft, ArrowRight, CheckCircle2, ChevronDown, Eye, FileCheck2, Plus, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { ApiError } from "../../../shared/api/http-client";
@@ -5,6 +6,12 @@ import { AppButton, AppCombobox, AppInput, AppModal, AppSelect, DraftNotice, Err
 import { useAuth } from "../../../shared/auth/AuthContext";
 import { academicApi } from "../../academic/api/academic.api";
 import { useTaxonomyOptions } from "../../academic/components/useTaxonomyOptions";
+=======
+import { AlertTriangle, ArrowLeft, ArrowRight, CheckCircle2, ChevronDown, Eye, FileCheck2, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { ApiError } from "../../../shared/api/http-client";
+import { AppButton, AppModal, DraftNotice, ErrorState, LoadingState, MultiFileDropzone } from "../../../shared/components";
+>>>>>>> a6cb2e5008ae2356aed6e92a0ca190475b0e0814
 import { useAsync } from "../../../shared/hooks/useAsync";
 import { useMutation } from "../../../shared/hooks/useMutation";
 import { useFormDraft } from "../../../shared/hooks/useFormDraft";
@@ -15,6 +22,7 @@ import { detailsErrors, detailsFromFields, detailsToFields, hasErrors, loadLastC
 
 const ACCEPT = ".pdf,.jpg,.jpeg,.png,.doc,.docx";
 const MAX_FILES = 10;
+<<<<<<< HEAD
 const MAX_BULK_FILES = 50;
 /** Files sent to the server per request (the server accepts MAX_UPLOAD_FILES per call, default 10). */
 const CHUNK = 10;
@@ -24,6 +32,8 @@ interface FileMeta { topic_id: string; material_type_id: string; preview_page_li
 const blankMeta = (): FileMeta => ({ topic_id: "", material_type_id: "", preview_page_limit: "", access_type: "free", price: "" });
 const metaPriceOk = (m: FileMeta) => m.access_type !== "paid" || parseFloat(m.price) > 0;
 const metaValid = (m: FileMeta) => !!m.topic_id && metaPriceOk(m);
+=======
+>>>>>>> a6cb2e5008ae2356aed6e92a0ca190475b0e0814
 const FORMAT_LABEL: Record<string, string> = { pdf: "PDF", jpg: "JPG", png: "PNG", docx: "DOCX", doc: "DOC", images: "IMAGES" };
 const isImage = (f: File) => /\.(jpe?g|png)$/i.test(f.name);
 
@@ -37,6 +47,7 @@ const messageOf = (e: unknown) => (e instanceof ApiError ? e.message : e instanc
  * Drafts live on the server (kept 14 days) and the form is remembered in the browser, so closing the dialog, going back
  * or reloading the page never loses the work: reopening "Add notes" resumes at the review step.
  */
+<<<<<<< HEAD
 export function AddNotesWizard({ onClose, onChanged, bulk = false }: { onClose: () => void; onChanged: () => void; bulk?: boolean }) {
   const title = bulk ? "Bulk import notes" : "Add notes";
   const loaded = useAsync(() => materialsApi.listDrafts(), []);
@@ -51,10 +62,26 @@ function Wizard({ initialDrafts, onClose, onChanged, bulk, title }: { bulk: bool
   // Details AND the chosen files are kept when the dialog is closed (files in memory only). Erased when everything is saved,
   // or by "Discard changes" — never by closing the window.
   const draft = useFormDraft(bulk ? "note-bulk-wizard" : "note-wizard", { details: startingDetails() as NoteDetails, files: [] as File[], combine: true }, { volatile: ["files"] });
+=======
+export function AddNotesWizard({ onClose, onChanged }: { onClose: () => void; onChanged: () => void }) {
+  const loaded = useAsync(() => materialsApi.listDrafts(), []);
+  if (loaded.loading) return <AppModal open wide compact title="Add notes" onClose={onClose}><LoadingState /></AppModal>;
+  if (loaded.error != null) return <AppModal open wide compact title="Add notes" onClose={onClose}><ErrorState error={loaded.error} onRetry={loaded.reload} /></AppModal>;
+  return <Wizard initialDrafts={loaded.data ?? []} onClose={onClose} onChanged={onChanged} />;
+}
+
+function Wizard({ initialDrafts, onClose, onChanged }: { initialDrafts: UploadDraft[]; onClose: () => void; onChanged: () => void }) {
+  const [drafts, setDrafts] = useState<UploadDraft[]>(initialDrafts);
+  const [step, setStep] = useState<"details" | "review">(initialDrafts.length ? "review" : "details");
+  // Details AND the chosen files are kept when the dialog is closed (files in memory only). Erased when everything is saved,
+  // or by "Discard changes" — never by closing the window.
+  const draft = useFormDraft("note-wizard", { details: startingDetails() as NoteDetails, files: [] as File[], combine: true }, { volatile: ["files"] });
+>>>>>>> a6cb2e5008ae2356aed6e92a0ca190475b0e0814
   const { details, files, combine } = draft.value;
   const imageCount = files.filter(isImage).length;
   const setDetails = (d: NoteDetails) => draft.set((p) => ({ ...p, details: d }));
   const setFiles = (f: File[]) => draft.set((p) => ({ ...p, files: f }));
+<<<<<<< HEAD
   const [triedRows, setTriedRows] = useState(false);
   const [fileMeta, setFileMeta] = useState<Record<string, FileMeta>>({});
   const [failed, setFailed] = useState<DraftBatch["failed"]>([]);
@@ -98,11 +125,36 @@ function Wizard({ initialDrafts, onClose, onChanged, bulk, title }: { bulk: bool
     if (!hasErrors(errs) && files.length) void convert.run();
   };
   const nextToFiles = () => { setTouched(true); if (!hasErrors(errs)) setStep("files"); };
+=======
+  const [failed, setFailed] = useState<DraftBatch["failed"]>([]);
+  const [touched, setTouched] = useState(false);
+  const [saved, setSaved] = useState(0);
+  const errs = detailsErrors(details);
+
+  const convert = useMutation(async () => {
+    const fd = new FormData();
+    for (const [k, v] of Object.entries(detailsToFields(details))) fd.append(k, v);
+    for (const f of files) fd.append("files", f);
+    if (combine && imageCount > 1) fd.append("combine_images", "true");
+    const res = await materialsApi.createDrafts(fd);
+    setDrafts((d) => [...d, ...res.drafts]);
+    setFailed(res.failed);
+    if (res.drafts.length) {
+      // Submitted: remember Board/Class/Subject/Stream/Chapter and get the form ready for the next note — only the topic,
+      // description and files start blank, so adding many notes to the same chapter means picking just the topic.
+      saveLastContext(details);
+      draft.set((p) => ({ ...p, details: { ...startingDetails(), ...loadLastContext() }, files: [] }));
+    } else setFiles([]);
+    if (res.drafts.length) setStep("review");
+  });
+  const startConvert = () => { setTouched(true); if (!hasErrors(errs) && files.length) void convert.run(); };
+>>>>>>> a6cb2e5008ae2356aed6e92a0ca190475b0e0814
 
   // Closing keeps the work. Only when notes were saved and nothing is left to review is the form considered finished and cleared.
   const finish = () => { if (saved) onChanged(); if (saved && drafts.length === 0) draft.clear(); onClose(); };
 
   return (
+<<<<<<< HEAD
     <AppModal open wide compact title={title} onClose={finish}>
       <ol className="mb-4 flex flex-wrap items-center gap-2 text-sm font-semibold" aria-label="Steps">
         {(bulk ? [["details", "1 · Details"], ["files", "2 · Add notes"], ["review", `3 · Review${drafts.length ? ` (${drafts.length})` : ""}`]] : [["details", "1 · Details & files"], ["review", `2 · Review${drafts.length ? ` (${drafts.length})` : ""}`]]).map(([k, label], i) => (
@@ -111,6 +163,13 @@ function Wizard({ initialDrafts, onClose, onChanged, bulk, title }: { bulk: bool
             <span className={`rounded-full px-3 py-1 ${step === k ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600"}`}>{label}</span>
           </li>
         ))}
+=======
+    <AppModal open wide compact title="Add notes" onClose={finish}>
+      <ol className="mb-4 flex items-center gap-2 text-sm font-semibold" aria-label="Steps">
+        <li className={`rounded-full px-3 py-1 ${step === "details" ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600"}`}>1 · Details &amp; files</li>
+        <span aria-hidden className="text-slate-300">—</span>
+        <li className={`rounded-full px-3 py-1 ${step === "review" ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600"}`}>2 · Review{drafts.length ? ` (${drafts.length})` : ""}</li>
+>>>>>>> a6cb2e5008ae2356aed6e92a0ca190475b0e0814
       </ol>
 
       {step === "details" && (
@@ -121,10 +180,17 @@ function Wizard({ initialDrafts, onClose, onChanged, bulk, title }: { bulk: bool
               <AppButton size="sm" onClick={() => setStep("review")}>Go to review <ArrowRight size={14} /></AppButton>
             </div>
           )}
+<<<<<<< HEAD
           <NoteDetailsFields columns={3} bulk={bulk} value={details} onChange={setDetails} errors={touched ? errs : {}} />
           {!bulk && <MultiFileDropzone required files={files} onFiles={setFiles} accept={ACCEPT} max={bulk ? MAX_BULK_FILES : MAX_FILES} label="Files" hint={`PDF, JPG, PNG, DOC or DOCX — up to ${bulk ? MAX_BULK_FILES : MAX_FILES} at a time. Everything is converted to PDF; you check it before it is saved.`}
             error={touched && !files.length ? "Choose at least one file" : undefined} />}
           {!bulk && imageCount > 1 && (
+=======
+          <NoteDetailsFields columns={3} value={details} onChange={setDetails} errors={touched ? errs : {}} />
+          <MultiFileDropzone required files={files} onFiles={setFiles} accept={ACCEPT} max={MAX_FILES} label="Files" hint={`PDF, JPG, PNG, DOC or DOCX — up to ${MAX_FILES} at a time. Everything is converted to PDF; you check it before it is saved.`}
+            error={touched && !files.length ? "Choose at least one file" : undefined} />
+          {imageCount > 1 && (
+>>>>>>> a6cb2e5008ae2356aed6e92a0ca190475b0e0814
             <label className="flex cursor-pointer items-start gap-2 rounded-xl border border-indigo-200 bg-indigo-50 p-3 text-sm text-indigo-900">
               <input type="checkbox" className="mt-0.5 h-4 w-4 rounded border-slate-300 text-indigo-600" checked={combine} onChange={(e) => draft.set((p) => ({ ...p, combine: e.target.checked }))} />
               <span><b>Combine my {imageCount} images into one PDF</b> — one note with one page per image, in the order shown above. Untick to make a separate note for each image.</span>
@@ -135,6 +201,7 @@ function Wizard({ initialDrafts, onClose, onChanged, bulk, title }: { bulk: bool
           <DraftNotice dirty={draft.dirty} restored={draft.restored} onDiscard={() => { draft.clear(); setTouched(false); }} />
           <div className="flex justify-end gap-2">
             <AppButton variant="secondary" onClick={finish}>Close</AppButton>
+<<<<<<< HEAD
             {bulk ? <AppButton onClick={nextToFiles}>Next <ArrowRight size={16} /></AppButton>
               : <AppButton loading={convert.loading} onClick={startConvert}>Convert &amp; review <ArrowRight size={16} /></AppButton>}
           </div>
@@ -150,17 +217,25 @@ function Wizard({ initialDrafts, onClose, onChanged, bulk, title }: { bulk: bool
           <div className="flex justify-between gap-2">
             <AppButton variant="secondary" onClick={() => setStep("details")}><ArrowLeft size={16} />Back</AppButton>
             <AppButton loading={convert.loading} disabled={!files.length} onClick={startConvert}>Review ({files.length}) <ArrowRight size={16} /></AppButton>
+=======
+            <AppButton loading={convert.loading} onClick={startConvert}>Convert &amp; review <ArrowRight size={16} /></AppButton>
+>>>>>>> a6cb2e5008ae2356aed6e92a0ca190475b0e0814
           </div>
         </div>
       )}
 
       {step === "review" && (
+<<<<<<< HEAD
         <Review drafts={drafts} setDrafts={setDrafts} failed={failed} onBack={() => setStep(bulk ? "files" : "details")} onClose={finish} onSaved={() => { setSaved((n) => n + 1); onChanged(); }} />
+=======
+        <Review drafts={drafts} setDrafts={setDrafts} failed={failed} onBack={() => setStep("details")} onClose={finish} onSaved={() => { setSaved((n) => n + 1); onChanged(); }} />
+>>>>>>> a6cb2e5008ae2356aed6e92a0ca190475b0e0814
       )}
     </AppModal>
   );
 }
 
+<<<<<<< HEAD
 /** Read-only recap of the shared details chosen on step 1, so every note added below clearly inherits them. */
 function ContextSummary({ details: d }: { details: NoteDetails }) {
   const board = useTaxonomyOptions("boards");
@@ -257,6 +332,8 @@ function FilesStep({ files, setFiles, chapterId, meta, setMeta, showErrors }: { 
   );
 }
 
+=======
+>>>>>>> a6cb2e5008ae2356aed6e92a0ca190475b0e0814
 function FailedList({ failed }: { failed: DraftBatch["failed"] }) {
   return (
     <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
@@ -335,12 +412,15 @@ function Review({ drafts, setDrafts, failed, onBack, onClose, onSaved }: {
   );
 }
 
+<<<<<<< HEAD
 /** The note's topic by name as the card heading (the file name when it has no topic), with the file name shown as a tag below. */
 function TopicName({ chapterId, topicId, fallback }: { chapterId: string; topicId: string; fallback: string }) {
   const topic = useTaxonomyOptions("topics", { chapter_id: chapterId }, !!chapterId && !!topicId);
   return <>{topic.options.find((o) => String(o.value) === topicId)?.label ?? fallback}</>;
 }
 
+=======
+>>>>>>> a6cb2e5008ae2356aed6e92a0ca190475b0e0814
 function DraftCard({ draft: d, details, onDetails, error, busy, onAccept, onDiscard }: {
   draft: UploadDraft; details: NoteDetails; onDetails: (d: NoteDetails) => void; error?: string; busy: boolean; onAccept: () => void; onDiscard: () => void;
 }) {
@@ -351,11 +431,18 @@ function DraftCard({ draft: d, details, onDetails, error, busy, onAccept, onDisc
     <li className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
+<<<<<<< HEAD
           <p className="truncate font-semibold text-slate-900"><TopicName chapterId={details.chapter_id} topicId={details.topic_id} fallback={d.original_filename} /></p>
           <p className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-slate-600">
             <span className="rounded-full bg-indigo-50 px-2 py-0.5 font-semibold text-indigo-700">{FORMAT_LABEL[d.source_format]}{converted ? " → PDF" : ""}</span>
             <span>{d.page_count} page{d.page_count === 1 ? "" : "s"}</span><span>{formatFileSize(d.file_size_bytes)}</span>
             <span className="max-w-[18rem] truncate rounded-full bg-emerald-50 px-2 py-0.5 font-semibold text-emerald-700" title={d.original_filename}>File: {d.original_filename}</span>
+=======
+          <p className="truncate font-semibold text-slate-900">{d.original_filename}</p>
+          <p className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-slate-600">
+            <span className="rounded-full bg-indigo-50 px-2 py-0.5 font-semibold text-indigo-700">{FORMAT_LABEL[d.source_format]}{converted ? " → PDF" : ""}</span>
+            <span>{d.page_count} page{d.page_count === 1 ? "" : "s"}</span><span>{formatFileSize(d.file_size_bytes)}</span>
+>>>>>>> a6cb2e5008ae2356aed6e92a0ca190475b0e0814
           </p>
         </div>
         <div className="flex flex-wrap gap-2">

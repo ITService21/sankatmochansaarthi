@@ -100,7 +100,11 @@ export function setDetail(d: NoteDetails, k: keyof NoteDetails, v: string): Note
  * chapter list shows only chapters of that board, class, subject and stream (plus "general" chapters valid for any stream).
  * An Admin restricted to certain boards/classes/subjects only sees those (the server enforces it regardless).
  */
+<<<<<<< HEAD
 export function NoteDetailsFields({ value: f, onChange, errors = {}, columns = 2, bulk = false }: { value: NoteDetails; onChange: (d: NoteDetails) => void; errors?: DetailsErrors; columns?: 2 | 3; bulk?: boolean }) {
+=======
+export function NoteDetailsFields({ value: f, onChange, errors = {}, columns = 2 }: { value: NoteDetails; onChange: (d: NoteDetails) => void; errors?: DetailsErrors; columns?: 2 | 3 }) {
+>>>>>>> a6cb2e5008ae2356aed6e92a0ca190475b0e0814
   const { user, can } = useAuth();
   const set = (k: keyof NoteDetails) => (v: string) => onChange(setDetail(f, k, v));
   const inScope = (ids: number[] | undefined) => (o: { value: string | number }) => !ids?.length || ids.includes(Number(o.value));
@@ -117,6 +121,7 @@ export function NoteDetailsFields({ value: f, onChange, errors = {}, columns = 2
     topic.addOption({ value: t.id, label: t.name });
     return String(t.id);
   };
+<<<<<<< HEAD
   /** Type-to-create for Subject and Chapter, so a name that is not in the list can be added and selected in one step. */
   const createSubject = async (name: string) => {
     const t = await academicApi.create("subjects", { name });
@@ -128,12 +133,15 @@ export function NoteDetailsFields({ value: f, onChange, errors = {}, columns = 2
     chapter.addOption({ value: t.id, label: t.name });
     return String(t.id);
   };
+=======
+>>>>>>> a6cb2e5008ae2356aed6e92a0ca190475b0e0814
   const sc = user?.role === "Admin" ? user.scopes : undefined;
   const streamName = STREAM_OPTIONS.find((o) => o.value === f.stream)?.label ?? "";
   const noChapters = `No ${streamName} chapters for this board, class and subject yet.${can("academic.manage") ? " Add one in Academic Setup → Chapters." : " Ask a Super Admin to add one."}`;
 
   return (
     <div className={`grid gap-3 ${columns === 3 ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+<<<<<<< HEAD
       {!bulk && <AppTextarea className={columns === 3 ? "sm:col-span-3" : "sm:col-span-2"} {...(columns === 3 ? { rows: 2 } : {})} label="Description" value={f.description} onChange={(ev) => set("description")(ev.target.value)} />}
       <AppCombobox required label="Board" placeholder="Select…" options={board.options.filter(inScope(sc?.board_ids))} value={f.board_id} onChange={set("board_id")} error={errors.board_id} />
       <AppCombobox required label="Class" placeholder={f.board_id ? "Select…" : "Choose a board first"} options={cls.options.filter(inScope(sc?.class_ids))} value={f.class_id} onChange={set("class_id")} disabled={!f.board_id} error={errors.class_id} />
@@ -146,6 +154,20 @@ export function NoteDetailsFields({ value: f, onChange, errors = {}, columns = 2
       {!bulk && <AppSelect label="Access" options={[{ value: "free", label: "Free" }, { value: "paid", label: "Paid" }]} value={f.access_type} onChange={set("access_type")} />}
       {!bulk && <AppInput label="Preview pages (blank = default)" inputMode="numeric" value={f.preview_page_limit} onChange={(ev) => set("preview_page_limit")(ev.target.value)} error={errors.preview_page_limit} />}
       {!bulk && f.access_type === "paid" && <>
+=======
+      <AppTextarea className={columns === 3 ? "sm:col-span-3" : "sm:col-span-2"} {...(columns === 3 ? { rows: 2 } : {})} label="Description" value={f.description} onChange={(ev) => set("description")(ev.target.value)} />
+      <AppCombobox required label="Board" placeholder="Select…" options={board.options.filter(inScope(sc?.board_ids))} value={f.board_id} onChange={set("board_id")} error={errors.board_id} />
+      <AppCombobox required label="Class" placeholder={f.board_id ? "Select…" : "Choose a board first"} options={cls.options.filter(inScope(sc?.class_ids))} value={f.class_id} onChange={set("class_id")} disabled={!f.board_id} error={errors.class_id} />
+      <AppSelect required label="Stream" placeholder={f.class_id ? "Select…" : "Choose a class first"} options={STREAM_OPTIONS} value={f.stream} onChange={set("stream")} disabled={!f.class_id} error={errors.stream} />
+      <AppCombobox required label="Subject" placeholder={f.stream ? "Select…" : "Choose a stream first"} options={subject.options.filter(inScope(sc?.subject_ids))} value={f.subject_id} onChange={set("subject_id")} disabled={!f.stream} error={errors.subject_id} />
+      <AppCombobox required label="Chapter" placeholder={ctxReady ? "Select…" : "Choose the subject first"} options={chapter.options} value={f.chapter_id} onChange={set("chapter_id")} disabled={!ctxReady} error={errors.chapter_id}
+        emptyMessage={chapter.loading ? "Loading chapters…" : noChapters} />
+      <AppCombobox label="Topic (optional)" createNoun="topic" onCreate={can("academic.manage") && f.chapter_id ? createTopic : undefined} placeholder={f.chapter_id ? "None" : "Choose a chapter first"} options={topic.options} value={f.topic_id} onChange={set("topic_id")} disabled={!f.chapter_id} emptyMessage={`This chapter has no topics yet — topics are optional, so you can leave this blank.${can("academic.manage") ? " Type a name to create one here." : ""}`} />
+      <AppCombobox label="Material type" placeholder="Default (first type)" options={types.options} value={f.material_type_id} onChange={set("material_type_id")} />
+      <AppSelect label="Access" options={[{ value: "free", label: "Free" }, { value: "paid", label: "Paid" }]} value={f.access_type} onChange={set("access_type")} />
+      <AppInput label="Preview pages (blank = default)" inputMode="numeric" value={f.preview_page_limit} onChange={(ev) => set("preview_page_limit")(ev.target.value)} error={errors.preview_page_limit} />
+      {f.access_type === "paid" && <>
+>>>>>>> a6cb2e5008ae2356aed6e92a0ca190475b0e0814
         <AppInput required label="Price" inputMode="decimal" placeholder="199.00" value={f.price} onChange={(ev) => set("price")(ev.target.value)} error={errors.price} />
         <AppInput required label="Currency" maxLength={3} value={f.currency} onChange={(ev) => set("currency")(ev.target.value)} error={errors.currency} />
       </>}

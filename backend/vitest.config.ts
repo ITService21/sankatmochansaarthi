@@ -1,4 +1,7 @@
+<<<<<<< HEAD
 import "dotenv/config";
+=======
+>>>>>>> a6cb2e5008ae2356aed6e92a0ca190475b0e0814
 import { defineConfig } from "vitest/config";
 
 /**
@@ -7,11 +10,19 @@ import { defineConfig } from "vitest/config";
  */
 export const testEnv = {
   NODE_ENV: "test",
+<<<<<<< HEAD
   DB_HOST: process.env.TEST_DB_HOST ?? process.env.DB_HOST ?? "127.0.0.1",
   DB_PORT: process.env.TEST_DB_PORT ?? process.env.DB_PORT ?? "3306",
   DB_USER: process.env.TEST_DB_USER ?? process.env.DB_USER ?? "root",
   DB_PASSWORD: process.env.TEST_DB_PASSWORD ?? process.env.DB_PASSWORD ?? "",
   DB_NAME: process.env.TEST_DB_NAME ?? process.env.DB_NAME ?? "edu_test",
+=======
+  DB_HOST: process.env.TEST_DB_HOST ?? "127.0.0.1",
+  DB_PORT: process.env.TEST_DB_PORT ?? "3306",
+  DB_USER: process.env.TEST_DB_USER ?? "root",
+  DB_PASSWORD: process.env.TEST_DB_PASSWORD ?? "",
+  DB_NAME: process.env.TEST_DB_NAME ?? "edu_test",
+>>>>>>> a6cb2e5008ae2356aed6e92a0ca190475b0e0814
   STORAGE_DRIVER: "memory",
   AI_PROVIDER: "fake",
   AI_AUTO_EVALUATE: "false", // tests trigger evaluation explicitly so statuses never change under them
