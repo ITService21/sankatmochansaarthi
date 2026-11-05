@@ -1,5 +1,5 @@
 import { useAsync } from "../../../shared/hooks/useAsync";
-import { http } from "../../../shared/api/http-client";
+import { http, API_BASE } from "../../../shared/api/http-client";
 
 interface Provider { name: "google" | "microsoft"; label: string; configured: boolean }
 
@@ -26,7 +26,7 @@ export function SocialButtons({ role }: { role?: "Student" | "Teacher" }) {
         {providers.map((p) => {
           const Logo = LOGOS[p.name];
           return p.configured ? (
-            <a key={p.name} href={`/api/v1/auth/oauth/${p.name}/start${role ? `?role=${role}` : ""}`} className={`${base} border-slate-300 bg-white text-slate-800 hover:border-slate-400 hover:bg-slate-50 hover:shadow-sm`}><Logo />{p.label}</a>
+            <a key={p.name} href={`${API_BASE}/auth/oauth/${p.name}/start${role ? `?role=${role}` : ""}`} className={`${base} border-slate-300 bg-white text-slate-800 hover:border-slate-400 hover:bg-slate-50 hover:shadow-sm`}><Logo />{p.label}</a>
           ) : (
             <span key={p.name} aria-disabled title={`${p.label} sign-in isn't set up on this server yet`} className={`${base} cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400`}><span className="opacity-50"><Logo /></span>{p.label}</span>
           );

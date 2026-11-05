@@ -2,7 +2,10 @@
  * Single HTTP client for the whole app (auth header, query-string building, envelope unwrapping, errors).
  * Features call `http.get/post/...`; nothing else uses fetch directly.
  */
-const BASE = "/api/v1";
+/** Optional absolute API origin (e.g. https://api.sankatmochansaarthi.com), baked in at build time. Unset = same-origin `/api/v1`. */
+const API_ORIGIN = ((import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "").replace(/\/+$/, "");
+export const API_BASE = `${API_ORIGIN}/api/v1`;
+const BASE = API_BASE;
 const TOKEN_KEY = "edu.token";
 
 export const tokenStore = {

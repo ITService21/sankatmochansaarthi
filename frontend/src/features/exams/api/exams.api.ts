@@ -1,4 +1,4 @@
-import { http } from "../../../shared/api/http-client";
+import { http, API_BASE } from "../../../shared/api/http-client";
 
 /** Types mirror the backend DTOs for the examination platform. */
 export type QType = "mcq" | "short" | "medium" | "long";
@@ -101,7 +101,7 @@ export function uploadSheets(examId: number, files: File[], replace: boolean, to
   return new Promise((resolve, reject) => {
     const form = new FormData(); files.forEach((f) => form.append("files", f)); if (replace) form.append("replace", "true");
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", `/api/v1/exams/${examId}/sheets`);
+    xhr.open("POST", `${API_BASE}/exams/${examId}/sheets`);
     if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`);
     xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100)); };
     xhr.onerror = () => reject(new Error("Couldn't reach the server. Check your connection and try again."));
