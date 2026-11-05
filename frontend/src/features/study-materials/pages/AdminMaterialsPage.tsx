@@ -21,11 +21,7 @@ import { noteHeading } from "../../../shared/utils/note-heading";
  */
 export function AdminMaterialsPage() {
   const { can, isSuper, user } = useAuth();
-<<<<<<< HEAD
-  const [adding, setAdding] = useState<false | "single" | "bulk">(false);
-=======
   const [adding, setAdding] = useState(false);
->>>>>>> a6cb2e5008ae2356aed6e92a0ca190475b0e0814
   const pending = useAsync(() => (can("materials.create") ? materialsApi.listDrafts() : Promise.resolve([])), [adding]);
   const [params, setParams] = useSearchParams();
   const get = (k: string) => params.get(k) ?? "";
@@ -73,25 +69,12 @@ export function AdminMaterialsPage() {
           <h1 className="text-2xl font-semibold">Manage notes</h1>
           {!isSuper && user?.role === "Admin" && (user.scopes.board_ids.length + user.scopes.class_ids.length + user.scopes.subject_ids.length > 0) && <p className="text-sm text-slate-600">Showing only the boards, classes and subjects you manage.</p>}
         </div>
-<<<<<<< HEAD
-        {can("materials.create") && (
-          <div className="flex gap-2">
-            <AppButton variant="secondary" onClick={() => setAdding("bulk")}>Bulk import</AppButton>
-            <AppButton onClick={() => setAdding("single")}>+ Add notes</AppButton>
-          </div>
-        )}
-=======
         {can("materials.create") && <AppButton onClick={() => setAdding(true)}>+ Add notes</AppButton>}
->>>>>>> a6cb2e5008ae2356aed6e92a0ca190475b0e0814
       </div>
       {(pending.data?.length ?? 0) > 0 && (
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
           <span><b>{pending.data!.length}</b> converted file{pending.data!.length > 1 ? "s are" : " is"} waiting for your review before being saved as notes.</span>
-<<<<<<< HEAD
-          <AppButton size="sm" onClick={() => setAdding("single")}>Review now</AppButton>
-=======
           <AppButton size="sm" onClick={() => setAdding(true)}>Review now</AppButton>
->>>>>>> a6cb2e5008ae2356aed6e92a0ca190475b0e0814
         </div>
       )}
       <div className="mb-4 grid gap-3 rounded-lg border bg-white p-4 sm:grid-cols-3">
@@ -107,11 +90,7 @@ export function AdminMaterialsPage() {
         </>
       )}
       {form && <MaterialFormModal material={form.material} onClose={() => setForm(null)} onSaved={() => { setForm(null); reload(); }} />}
-<<<<<<< HEAD
-      {adding && <AddNotesWizard bulk={adding === "bulk"} onClose={() => setAdding(false)} onChanged={reload} />}
-=======
       {adding && <AddNotesWizard onClose={() => setAdding(false)} onChanged={reload} />}
->>>>>>> a6cb2e5008ae2356aed6e92a0ca190475b0e0814
       {replacing && <ReplaceFileModal material={replacing} onClose={() => setReplacing(null)} onDone={() => { setReplacing(null); reload(); }} />}
       {preview && <PreviewModal m={preview} onClose={() => setPreview(null)} onChanged={reload} />}
       <ConfirmDialog open={!!deleting} title="Delete note" message={`Soft-delete "${deleting?.title}"? It disappears from the site but the record and files are retained.`} confirmLabel="Delete"
