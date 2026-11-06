@@ -9,6 +9,7 @@ import { formatDateTime } from "../../../shared/utils/format-date";
 import { Material } from "../../../shared/types";
 import { materialsApi } from "../api/study-materials.api";
 import { AddNotesWizard } from "../components/AddNotesWizard";
+import { BulkNotesWizard } from "../components/BulkNotesWizard";
 import { MaterialFormModal } from "../components/MaterialFormModal";
 import { MaterialPriceTag } from "../components/MaterialPriceTag";
 import { PreviewModal } from "../components/PreviewModal";
@@ -22,6 +23,7 @@ import { noteHeading } from "../../../shared/utils/note-heading";
 export function AdminMaterialsPage() {
   const { can, isSuper, user } = useAuth();
   const [adding, setAdding] = useState(false);
+  const [bulkAdding, setBulkAdding] = useState(false);
   const pending = useAsync(() => (can("materials.create") ? materialsApi.listDrafts() : Promise.resolve([])), [adding]);
   const [params, setParams] = useSearchParams();
   const get = (k: string) => params.get(k) ?? "";
@@ -69,7 +71,12 @@ export function AdminMaterialsPage() {
           <h1 className="text-2xl font-semibold">Manage notes</h1>
           {!isSuper && user?.role === "Admin" && (user.scopes.board_ids.length + user.scopes.class_ids.length + user.scopes.subject_ids.length > 0) && <p className="text-sm text-slate-600">Showing only the boards, classes and subjects you manage.</p>}
         </div>
-        {can("materials.create") && <AppButton onClick={() => setAdding(true)}>+ Add notes</AppButton>}
+        {can("materials.create") && (
+          <div className="flex gap-2">
+            <AppButton variant="secondary" onClick={() => setBulkAdding(true)}>+ Bulk add notes</AppButton>
+            <AppButton onClick={() => setAdding(true)}>+ Add notes</AppButton>
+          </div>
+        )}
       </div>
       {(pending.data?.length ?? 0) > 0 && (
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
@@ -91,6 +98,7 @@ export function AdminMaterialsPage() {
       )}
       {form && <MaterialFormModal material={form.material} onClose={() => setForm(null)} onSaved={() => { setForm(null); reload(); }} />}
       {adding && <AddNotesWizard onClose={() => setAdding(false)} onChanged={reload} />}
+      {bulkAdding && <BulkNotesWizard onClose={() => setBulkAdding(false)} onChanged={reload} />}
       {replacing && <ReplaceFileModal material={replacing} onClose={() => setReplacing(null)} onDone={() => { setReplacing(null); reload(); }} />}
       {preview && <PreviewModal m={preview} onClose={() => setPreview(null)} onChanged={reload} />}
       <ConfirmDialog open={!!deleting} title="Delete note" message={`Soft-delete "${deleting?.title}"? It disappears from the site but the record and files are retained.`} confirmLabel="Delete"
