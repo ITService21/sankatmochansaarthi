@@ -54,6 +54,8 @@ export const env = {
     google: { clientId: process.env.GOOGLE_CLIENT_ID ?? "", clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "" },
     microsoft: { clientId: process.env.MICROSOFT_CLIENT_ID ?? "", clientSecret: process.env.MICROSOFT_CLIENT_SECRET ?? "", tenant: str("MICROSOFT_TENANT", "common") },
   },
+  /** Set API_HIT_LOGS_ENABLED=true to store every API call in the api_hit_logs table. Off by default (the table grows fast). */
+  apiHitLogsEnabled: (process.env.API_HIT_LOGS_ENABLED ?? "false").toLowerCase() === "true",
   maxUploadMb: num("MAX_UPLOAD_MB", 25),
   upload: {
     /** Most files accepted in one "convert & review" batch. */

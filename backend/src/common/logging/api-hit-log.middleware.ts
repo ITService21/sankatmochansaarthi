@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { RequestHandler } from "express";
+import { env } from "../../config/env";
 import { recordApiHit } from "./api-hit-log.service";
 
 /** Paths never logged: the log viewer itself (no recursive logging) and health probes. */
@@ -28,6 +29,7 @@ export const apiHitLogMiddleware: RequestHandler = (req, res, next) => {
   };
 
   res.on("finish", () => {
+    if (!env.apiHitLogsEnabled) return;
     const fullPath = req.originalUrl;
     if (SKIP_PREFIXES.some((p) => fullPath.startsWith(p))) return;
 
